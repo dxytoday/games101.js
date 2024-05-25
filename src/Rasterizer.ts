@@ -37,43 +37,9 @@ export enum Primitive {
 
 function insideTriangle(x: number, y: number, _v: Vector3[]): boolean {
 
-    const p = new Vector3(x, y, 0);
+    // TODO : Implement this function to check if the point (x, y) is inside the triangle represented by _v[0], _v[1], _v[2]
 
-    let flag: number | undefined;
-
-    for (let ii = 0; ii < 3; ii++) {
-
-        const currP = _v[ii];
-        const nextP = _v[(ii + 1) % 3];
-
-        const l1 = new Vector3().subVectors(currP, p);
-        const l2 = new Vector3().subVectors(currP, nextP);
-
-        const cp = new Vector3().crossVectors(l1, l2);
-
-        if (cp.z === 0) {
-
-            continue;
-
-        }
-
-        const sign = cp.z < 0 ? 0 : 1;
-
-        if (flag === undefined) {
-
-            flag = sign;
-
-        }
-
-        if (flag !== sign) {
-
-            return false;
-
-        }
-
-    }
-
-    return true;
+    return false;
 
 }
 
@@ -245,44 +211,21 @@ export class Rasterizer {
 
     }
 
+    // 屏幕空间光栅化
     private rasterize_triangle(t: Triangle): void {
 
         const v = t.v;
 
-        const min_x = Math.floor(Math.min(v[0].x, v[1].x, v[2].x));
-        const min_y = Math.floor(Math.min(v[0].y, v[1].y, v[2].y));
-        const max_x = Math.floor(Math.max(v[0].x, v[1].x, v[2].x));
-        const max_y = Math.floor(Math.max(v[0].y, v[1].y, v[2].y));
+        // TODO : Find out the bounding box of current triangle.
+        // iterate through the pixel and find if the current pixel is inside the triangle
 
-        for (let x = min_x; x < max_x; x++) {
+        // If so, use the following code to get the interpolated z value.
+        //auto[alpha, beta, gamma] = computeBarycentric2D(x, y, t.v);
+        //float w_reciprocal = 1.0/(alpha / v[0].w() + beta / v[1].w() + gamma / v[2].w());
+        //float z_interpolated = alpha * v[0].z() / v[0].w() + beta * v[1].z() / v[1].w() + gamma * v[2].z() / v[2].w();
+        //z_interpolated *= w_reciprocal;
 
-            for (let y = min_y; y < max_y; y++) {
-
-                if (!insideTriangle(x + 0.5, y + 0.5, v)) {
-
-                    continue;
-
-                }
-
-                const ind = this.get_index(x, y);
-
-                const [alpha, beta, gamma] = computeBarycentric2D(x + 0.5, y + 0.5, t.v);
-
-                const z_interpolated = alpha * v[0].z + beta * v[1].z + gamma * v[2].z;
-
-                if (z_interpolated >= this.depth_buf[ind]) {
-
-                    continue;
-
-                }
-
-                this.set_pixel(ind, t.getColor());
-
-                this.depth_buf[ind] = z_interpolated;
-
-            }
-
-        }
+        // TODO : set the current pixel (use the set_pixel function) to the color of the triangle (use getColor function) if it should be painted.
 
     }
 

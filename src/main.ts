@@ -5,27 +5,6 @@ import { Vector3 } from "./math/Vector3";
 let context: CanvasRenderingContext2D;
 let image: ImageData;
 
-function get_model_matrix(angle: number): Matrix4 {
-
-	const model = new Matrix4();
-
-	const theta = angle / 180 * Math.PI;
-	const cos = Math.cos(theta);
-	const sin = Math.sin(theta);
-
-	model.set(
-
-		cos, -sin, 0, 0,
-		sin, cos, 0, 0,
-		0, 0, 1, 0,
-		0, 0, 0, 1
-
-	);
-
-	return model;
-
-}
-
 function get_view_matrix(eye_pos: Vector3): Matrix4 {
 
 	const view = new Matrix4();
@@ -43,45 +22,21 @@ function get_view_matrix(eye_pos: Vector3): Matrix4 {
 
 }
 
+function get_model_matrix(angle: number): Matrix4 {
+
+	const model = new Matrix4();
+
+    // TODO: Copy-paste your implementation from the previous assignment.
+
+	return model;
+
+}
+
 function get_projection_matrix(eye_fov: number, aspect_ratio: number, zNear: number, zFar: number): Matrix4 {
 
 	const projection = new Matrix4();
 
-	const theta = eye_fov / 180 * Math.PI * 0.5;
-	const yTop = -zNear * Math.tan(theta);
-	const yBottom = -yTop;
-	const xRight = yTop * aspect_ratio;
-	const xLeft = -xRight;
-
-	const pers = new Matrix4().set(
-
-		zNear, 0, 0, 0,
-		0, zNear, 0, 0,
-		0, 0, zNear + zFar, -zFar * zNear,
-		0, 0, 1, 0
-
-	);
-
-	const tran = new Matrix4().set(
-
-		1, 0, 0, -(xLeft + xRight) / 2,
-		0, 1, 0, -(yTop + yBottom) / 2,
-		0, 0, 1, -(zNear + zFar) / 2,
-		0, 0, 0, 1,
-
-	);
-
-	const scal = new Matrix4().set(
-
-		2 / (xRight - xLeft), 0, 0, 0,
-		0, 2 / (yTop - yBottom), 0, 0,
-		0, 0, 2 / (zNear - zFar), 0,
-		0, 0, 0, 1,
-
-	);
-
-	projection.multiplyMatrices(tran, pers);
-	projection.multiplyMatrices(scal, projection);
+    // TODO: Copy-paste your implementation from the previous assignment.
 
 	return projection;
 
