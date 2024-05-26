@@ -76,4 +76,10 @@ export class Vector4 {
 
     }
 
+    public clone(): Vector4 {
+
+        return new Vector4(this.x, this.y, this.z, this.w);
+
+    }
+
 }

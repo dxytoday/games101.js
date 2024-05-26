@@ -1,7 +1,13 @@
+import { fragment_shader_payload, vertex_shader_payload } from "./Shader";
+import { Texture } from "./Texture";
 import { Triangle } from "./Triangle";
 import { Matrix4 } from "./math/Matrix4";
+import { Vector2 } from "./math/Vector2";
 import { Vector3 } from "./math/Vector3";
 import { Vector4 } from "./math/Vector4";
+
+type VertexShader = (paylod: vertex_shader_payload) => Vector3;
+type FragmentShader = (paylod: fragment_shader_payload) => Vector3;
 
 type pos_buf_id = {
 
@@ -35,15 +41,53 @@ export enum Primitive {
 
 }
 
-function insideTriangle(x: number, y: number, _v: Vector3[]): boolean {
+function insideTriangle(x: number, y: number, _v: Vector4[]): boolean {
 
-    // TODO : Implement this function to check if the point (x, y) is inside the triangle represented by _v[0], _v[1], _v[2]
+    const p = new Vector3(x, y, 0);
 
-    return false;
+    let flag: number | undefined;
+
+    const l1 = new Vector3()
+    const l2 = new Vector3()
+    const cp = new Vector3()
+
+    for (let ii = 0; ii < 3; ii++) {
+
+        const currP = _v[ii].toVector3();
+        const nextP = _v[(ii + 1) % 3].toVector3();
+
+        l1.subVectors(currP, p);
+        l2.subVectors(currP, nextP);
+
+        cp.crossVectors(l1, l2);
+
+        if (cp.z === 0) {
+
+            continue;
+
+        }
+
+        const sign = cp.z < 0 ? 0 : 1;
+
+        if (flag === undefined) {
+
+            flag = sign;
+
+        }
+
+        if (flag !== sign) {
+
+            return false;
+
+        }
+
+    }
+
+    return true;
 
 }
 
-function computeBarycentric2D(x: number, y: number, v: Vector3[]): [number, number, number] {
+function computeBarycentric2D(x: number, y: number, v: Vector3[] | Vector4[]): [number, number, number] {
 
     const c1 = (x * (v[1].y - v[2].y) + (v[2].x - v[1].x) * y + v[1].x * v[2].y - v[2].x * v[1].y) / (v[0].x * (v[1].y - v[2].y) + (v[2].x - v[1].x) * v[0].y + v[1].x * v[2].y - v[2].x * v[1].y);
     const c2 = (x * (v[2].y - v[0].y) + (v[0].x - v[2].x) * y + v[2].x * v[0].y - v[0].x * v[2].y) / (v[1].x * (v[2].y - v[0].y) + (v[0].x - v[2].x) * v[1].y + v[2].x * v[0].y - v[0].x * v[2].y);
@@ -51,6 +95,44 @@ function computeBarycentric2D(x: number, y: number, v: Vector3[]): [number, numb
 
     return [c1, c2, c3];
 }
+
+function to_vec4(v: Vector3, w: number): Vector4 {
+
+    return new Vector4().fromVector3(v, w);
+
+}
+
+
+function interpolate_v3(alpha: number, beta: number, gamma: number, vert1: Vector3, vert2: Vector3, vert3: Vector3, weight: number): Vector3 {
+
+    const result = new Vector3();
+
+    const v = new Vector3();
+
+    result.add(v.copy(vert1).multiplyScalar(alpha));
+    result.add(v.copy(vert2).multiplyScalar(beta));
+    result.add(v.copy(vert3).multiplyScalar(gamma));
+    result.multiplyScalar(1 / weight);
+
+    return result;
+
+}
+
+function interpolate_v2(alpha: number, beta: number, gamma: number, vert1: Vector2, vert2: Vector2, vert3: Vector2, weight: number) {
+
+    const result = new Vector2();
+
+    const v = new Vector2();
+
+    result.add(v.copy(vert1).multiplyScalar(alpha));
+    result.add(v.copy(vert2).multiplyScalar(beta));
+    result.add(v.copy(vert3).multiplyScalar(gamma));
+    result.multiplyScalar(1 / weight);
+
+    return result;
+
+}
+
 
 export class Rasterizer {
 
@@ -62,6 +144,11 @@ export class Rasterizer {
     private model: Matrix4 = new Matrix4();
     private view: Matrix4 = new Matrix4();
     private projection: Matrix4 = new Matrix4();
+
+    private texture: Texture | undefined;
+
+    private vertex_shader = (paylod: vertex_shader_payload) => new Vector3();
+    private fragment_shader = (paylod: fragment_shader_payload) => new Vector3();
 
     public constructor(
 
@@ -149,38 +236,61 @@ export class Rasterizer {
 
     }
 
-    public draw(pos_buffer: pos_buf_id, ind_buffer: ind_buf_id, col_buffer: col_buf_id, type: Primitive): void {
-
-        const buf = this.buffers[pos_buffer.pos_id];
-        const ind = this.buffers[ind_buffer.ind_id];
-        const col = this.buffers[col_buffer.col_id];
+    public draw(TriangleList: Triangle[]): void {
 
         const f1 = (50 - 0.1) / 2;
         const f2 = (50 + 0.1) / 2;
 
+        const mv = new Matrix4();
         const mvp = new Matrix4();
-        mvp.multiplyMatrices(this.view, this.model);
-        mvp.multiplyMatrices(this.projection, mvp);
+        mv.multiplyMatrices(this.view, this.model);
+        mvp.multiplyMatrices(this.projection, mv);
 
-        for (const i of ind) {
+        const inv_trans = mv.clone();
+        inv_trans.invert().transpose();
 
-            const t = new Triangle();
+        for (const t of TriangleList) {
 
-            // 执行 mvp 变换
+            const newtri = new Triangle();
+
+            newtri.tex_coords[0] = t.tex_coords[0];
+            newtri.tex_coords[1] = t.tex_coords[1];
+            newtri.tex_coords[2] = t.tex_coords[2];
+
+            const mm: Vector4[] = [
+
+                t.v[0].clone().applyMatrix(mv),
+                t.v[1].clone().applyMatrix(mv),
+                t.v[2].clone().applyMatrix(mv),
+
+            ]
+
+            const viewspace_pos: Vector3[] = mm.map(v => v.toVector3());
+
             const v = [
 
-                new Vector4().fromVector3(buf[i.x]).applyMatrix(mvp),
-                new Vector4().fromVector3(buf[i.y]).applyMatrix(mvp),
-                new Vector4().fromVector3(buf[i.z]).applyMatrix(mvp),
+                t.v[0].clone().applyMatrix(mvp),
+                t.v[1].clone().applyMatrix(mvp),
+                t.v[2].clone().applyMatrix(mvp),
 
             ]
 
             // 齐次除法
             for (const vert of v) {
 
-                vert.divideScalar(vert.w);
+                vert.x /= vert.w;
+                vert.y /= vert.w;
+                vert.z /= vert.w;
 
             }
+
+            const n: Vector4[] = [
+
+                to_vec4(t.normal[0], 0).applyMatrix(inv_trans),
+                to_vec4(t.normal[1], 0).applyMatrix(inv_trans),
+                to_vec4(t.normal[2], 0).applyMatrix(inv_trans),
+
+            ];
 
             // 视口变换
             for (const vert of v) {
@@ -193,39 +303,77 @@ export class Rasterizer {
 
             for (let i = 0; i < 3; i++) {
 
-                t.setVertex(i, v[i].toVector3());
+                newtri.setVertex(i, v[i]);
 
             }
 
-            const col_x = col[i.x];
-            const col_y = col[i.y];
-            const col_z = col[i.z];
+            for (let i = 0; i < 3; ++i) {
 
-            t.setColor(0, col_x);
-            t.setColor(1, col_y);
-            t.setColor(2, col_z);
+                newtri.setNormal(i, n[i].toVector3());
 
-            this.rasterize_triangle(t);
+            }
+
+            newtri.setColor(0, new Vector3(148, 121, 92));
+            newtri.setColor(1, new Vector3(148, 121, 92));
+            newtri.setColor(2, new Vector3(148, 121, 92));
+
+            this.rasterize_triangle(newtri, viewspace_pos);
 
         }
 
     }
 
     // 屏幕空间光栅化
-    private rasterize_triangle(t: Triangle): void {
+    private rasterize_triangle(t: Triangle, view_pos: Vector3[]): void {
 
         const v = t.v;
 
-        // TODO : Find out the bounding box of current triangle.
-        // iterate through the pixel and find if the current pixel is inside the triangle
+        const min_x = Math.round(Math.min(v[0].x, v[1].x, v[2].x));
+        const min_y = Math.round(Math.min(v[0].y, v[1].y, v[2].y));
+        const max_x = Math.round(Math.max(v[0].x, v[1].x, v[2].x));
+        const max_y = Math.round(Math.max(v[0].y, v[1].y, v[2].y));
 
-        // If so, use the following code to get the interpolated z value.
-        //auto[alpha, beta, gamma] = computeBarycentric2D(x, y, t.v);
-        //float w_reciprocal = 1.0/(alpha / v[0].w() + beta / v[1].w() + gamma / v[2].w());
-        //float z_interpolated = alpha * v[0].z() / v[0].w() + beta * v[1].z() / v[1].w() + gamma * v[2].z() / v[2].w();
-        //z_interpolated *= w_reciprocal;
+        for (let x = min_x; x < max_x; x++) {
 
-        // TODO : set the current pixel (use the set_pixel function) to the color of the triangle (use getColor function) if it should be painted.
+            for (let y = min_y; y < max_y; y++) {
+
+                if (!insideTriangle(x + 0.5, y + 0.5, v)) {
+
+                    continue;
+
+                }
+
+                const [alpha, beta, gamma] = computeBarycentric2D(x + 0.5, y + 0.5, t.v);
+
+                const Z = 1.0 / (alpha / v[0].w + beta / v[1].w + gamma / v[2].w);
+                let zp = alpha * v[0].z / v[0].w + beta * v[1].z / v[1].w + gamma * v[2].z / v[2].w;
+                zp *= Z;
+
+                const ind = this.get_index(x, y);
+
+                if (zp >= this.depth_buf[ind]) {
+
+                    continue;
+
+                }
+
+                this.depth_buf[ind] = zp;
+
+                const interpolated_color = interpolate_v3(alpha, beta, gamma, t.color[0], t.color[1], t.color[2], 1);
+                const interpolated_normal = interpolate_v3(alpha, beta, gamma, t.normal[0], t.normal[1], t.normal[2], 1);
+                const interpolated_texcoords = interpolate_v2(alpha, beta, gamma, t.tex_coords[0], t.tex_coords[1], t.tex_coords[2], 1);
+                const interpolated_shadingcoords = interpolate_v3(alpha, beta, gamma, view_pos[0], view_pos[1], view_pos[2], 1);
+
+                const payload = new fragment_shader_payload(interpolated_color, interpolated_normal, interpolated_texcoords, this.texture);
+                payload.view_pos = interpolated_shadingcoords;
+
+                const pixel_color = this.fragment_shader(payload);
+
+                this.set_pixel(ind, pixel_color);
+
+            }
+
+        }
 
     }
 
@@ -238,6 +386,24 @@ export class Rasterizer {
     private set_pixel(ind: number, color: Vector3): void {
 
         this.frame_buf[ind].copy(color);
+
+    }
+
+    public set_texture(tex: Texture): void {
+
+        this.texture = tex;
+
+    }
+
+    public set_vertex_shader(vert_shader: VertexShader): void {
+
+        this.vertex_shader = vert_shader;
+
+    }
+
+    public set_fragment_shader(frag_shader: FragmentShader): void {
+
+        this.fragment_shader = frag_shader;
 
     }
 
