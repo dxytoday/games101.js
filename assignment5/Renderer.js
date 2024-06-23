@@ -1,4 +1,4 @@
-import { Vector3, MathUtils } from '../libs/index.js';
+import { Vector3, MathUtils } from 'three';
 import { DIFFUSE_AND_GLOSSY, REFLECTION_AND_REFRACTION, REFLECTION } from './Object.js';
 
 class hit_payload {

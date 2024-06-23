@@ -1,4 +1,4 @@
-import { Vector3 } from '../libs/index.js';
+import { Vector3 } from 'three';
 import { Object } from "./Object.js";
 
 class Sphere extends Object {

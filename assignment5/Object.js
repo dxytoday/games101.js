@@ -1,4 +1,4 @@
-import { Vector3 } from '../libs/index.js';
+import { Vector3 } from 'three';
 
 const DIFFUSE_AND_GLOSSY = 0;
 const REFLECTION_AND_REFRACTION = 1;

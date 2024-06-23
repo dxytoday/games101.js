@@ -1,4 +1,4 @@
-import { Vector3, Vector2 } from '../libs/index.js';
+import { Vector3, Vector2 } from 'three';
 import { Object } from "./Object.js";
 
 function rayTriangleIntersect(v0, v1, v2, orig, dir) {

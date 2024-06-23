@@ -1,4 +1,4 @@
-import { Vector3 } from '../libs/index.js';
+import { Vector3 } from 'three';
 import { Light } from './Light.js';
 import { Object } from './Object.js';
 
