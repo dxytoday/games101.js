@@ -11,7 +11,7 @@ class Renderer {
 
 	frameBuffer = [];
 
-	render(scene, eye_pos, matrix) {
+	render(scene, eye_pos, eye_matrix) {
 
 		const frameBuffer = this.frameBuffer;
 
@@ -30,7 +30,7 @@ class Renderer {
 				const y = (1 - 2 * ((py + 0.5) / height)) * scale;
 
 				const dir = new Vector3(x, y, -1).normalize();
-				dir.applyMatrix4(matrix);
+				dir.applyMatrix4(eye_matrix);
 
 				const ray = new Ray(eye_pos, dir);
 

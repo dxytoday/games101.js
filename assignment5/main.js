@@ -1,4 +1,4 @@
-import { Vector3, Vector2, Matrix4 } from 'three';
+import { Vector3, Vector2, OrbitControls } from 'three';
 import { View } from 'View';
 import { Scene } from './Scene.js';
 import { Sphere } from './Sphere.js';
@@ -15,7 +15,7 @@ function main() {
 
 	const sph1 = new Sphere(new Vector3(-1, 0, -12), 2);
 	sph1.materialType = REFLECTION;
-	sph1.diffuseColor.set(153, 179, 204);
+	sph1.diffuseColor.set(0.6, 0.7, 0.8);
 
 	const sph2 = new Sphere(new Vector3(0.5, -0.5, -8), 1.5);
 	sph2.ior = 1.5;
@@ -36,28 +36,21 @@ function main() {
 
 	const r = new Renderer();
 
-	let angel = 90;
+	const camera = new OrbitControls(view.canvas, new Vector3(0, 4, 0), new Vector3(0, -3, -11));
 
-	const eye_pos_def = new Vector3(0, 4, 0);
-	const eye_target = new Vector3(0, -3, -11);
-	const eye_up = new Vector3(0, 1, 0);
+	function render() {
 
-	const matrix = new Matrix4();
-	const eye_pos = new Vector3();
+		if (!camera.changed) {
 
-	function render(delta) {
+			return;
 
-		angel = (angel + delta * 45) % 360;
+		}
 
-		matrix.makeRotationAxis(eye_up, angel / 180 * Math.PI);
+		camera.changed = false;
 
-		eye_pos.subVectors(eye_pos_def, eye_target);
-		eye_pos.applyMatrix4(matrix);
-		eye_pos.add(eye_target);
+		r.enablePathTracing = !camera.start;
 
-		matrix.lookAt(eye_pos, eye_target, eye_up);
-
-		r.render(scene, eye_pos, matrix);
+		r.render(scene, camera.position, camera.matrix);
 
 		view.fill(r.frameBuffer);
 

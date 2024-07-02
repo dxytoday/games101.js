@@ -1,16 +1,25 @@
-import * as THREE from '../math/three.js';
 
-export class Intersection {
+/** 射线交集对象 */
+class Intersection {
 
-	happened = false;
-	coords = new THREE.Vector3();
-	tcoords = new THREE.Vector3();
-	normal = new THREE.Vector3();
-	emit = new THREE.Vector3();
+	coords = undefined;
+	normal = undefined;
+	mesh = undefined;
+	object = undefined;
+	material = undefined;
+
 	distance = Infinity;
-	obj;
-	m;
 
+}
+
+/** 面积光源采样对象 */
+class Sample {
+
+	coords = undefined;
+	normal = undefined;
+	emmission = undefined;
 	pdf = 0;
 
 }
+
+export { Intersection, Sample };

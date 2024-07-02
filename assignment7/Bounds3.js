@@ -1,9 +1,18 @@
-import * as THREE from '../math/three.js';
+import { Vector3 } from '../libs/index.js';
 
-export class Bounds3 {
+class Bounds3 {
 
-	min = new THREE.Vector3().setScalar(+Infinity);
-	max = new THREE.Vector3().setScalar(-Infinity);
+	min = new Vector3().setScalar(+Infinity);
+	max = new Vector3().setScalar(-Infinity);
+
+	makeEmpty() {
+
+		this.min.x = this.min.y = this.min.z = + Infinity;
+		this.max.x = this.max.y = this.max.z = - Infinity;
+
+		return this;
+
+	}
 
 	expandByPoint(point) {
 
@@ -14,28 +23,31 @@ export class Bounds3 {
 
 	}
 
-	union(b) {
+	/** 并集 */
+	union(bounds3) {
 
-		this.min.min(b.min);
-		this.max.max(b.max);
+		this.min.min(bounds3.min);
+		this.max.max(bounds3.max);
 
 		return this;
+
 	}
 
-	centroid(target = new THREE.Vector3()) {
+	/** 质心 */
+	centroid(target = new Vector3()) {
 
 		return target.addVectors(this.min, this.max).multiplyScalar(0.5);
 
 	}
 
+	/** 尺寸值最大轴 */
 	maxExtent() {
 
-		const d = new THREE.Vector3();
-		d.subVectors(this.max, this.min);
+		const size = new Vector3().subVectors(this.max, this.min);
 
-		if (d.x > d.y && d.x > d.z) return 0;
+		if (size.x > size.y && size.x > size.z) return 0;
 
-		else if (d.y > d.z) return 1;
+		else if (size.y > size.z) return 1;
 
 		else return 2;
 
@@ -51,7 +63,7 @@ export class Bounds3 {
 		let t_Max_y = (this.max.y - ray.origin.y) * invDir.y;
 		let t_Max_z = (this.max.z - ray.origin.z) * invDir.z;
 
-		if (dirIsNeg[0]) {
+		if (!dirIsNeg[0]) {
 
 			const t = t_Min_x;
 			t_Min_x = t_Max_x;
@@ -59,7 +71,7 @@ export class Bounds3 {
 
 		}
 
-		if (dirIsNeg[1]) {
+		if (!dirIsNeg[1]) {
 
 			const t = t_Min_y;
 			t_Min_y = t_Max_y;
@@ -67,7 +79,7 @@ export class Bounds3 {
 
 		}
 
-		if (dirIsNeg[2]) {
+		if (!dirIsNeg[2]) {
 
 			const t = t_Min_z;
 			t_Min_z = t_Max_z;
@@ -82,13 +94,6 @@ export class Bounds3 {
 
 	}
 
-	surfaceArea() {
-
-		const d = new THREE.Vector3();
-		d.subVectors(this.max, this.min);
-
-		return 2 * (d.x * d.y + d.x * d.z + d.y * d.z);
-
-	}
-
 }
+
+export { Bounds3 };

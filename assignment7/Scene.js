@@ -1,42 +1,21 @@
-import * as THREE from '../math/three.js';
+import { Vector3 } from '../libs/index.js';
 import { BVHAccel } from './BVHAccel.js';
-import { MaterialType } from '../assignment5/Object.js';
 import { Ray } from './Ray.js';
 
-export class Scene {
-
-	width = 0;
-	height = 0;
+class Scene {
 
 	fov = 40;
-	backgroundColor = new THREE.Vector3(0.235294, 0.67451, 0.843137);
-
-	maxDepth = 5;
-	epsilon = 0.00001;
+	backgroundColor = new Vector3(0, 0, 0);
 
 	objects = [];
-	lights = [];
 
-	bvh;
+	bvh = undefined;
 
-	russianRoulette = 0.5;
+	russianRoulette = 0.8;
 
-	constructor(width, height) {
-
-		this.width = width;
-		this.height = height;
-
-	}
-
-	addObject(object) {
+	add(object) {
 
 		this.objects.push(object);
-
-	}
-
-	addLight(light) {
-
-		this.lights.push(light);
 
 	}
 
@@ -56,11 +35,11 @@ export class Scene {
 
 		let emit_area_sum = 0;
 
-		for (const each of this.objects) {
+		for (const eachObject of this.objects) {
 
-			if (each.hasEmit()) {
+			if (eachObject.hasEmission()) {
 
-				emit_area_sum += each.getArea();
+				emit_area_sum += eachObject.getArea();
 
 			}
 
@@ -69,15 +48,15 @@ export class Scene {
 		const p = emit_area_sum * Math.random();
 		emit_area_sum = 0;
 
-		for (const each of this.objects) {
+		for (const eachObject of this.objects) {
 
-			if (each.hasEmit()) {
+			if (eachObject.hasEmission()) {
 
-				emit_area_sum += each.getArea();
+				emit_area_sum += eachObject.getArea();
 
 				if (p <= emit_area_sum) {
 
-					return each.sample();
+					return eachObject.areaSampling();
 
 				}
 
@@ -87,82 +66,161 @@ export class Scene {
 
 	}
 
+	direct(ray, intersection) {
+
+		const color = new Vector3();
+
+		const hitPoint = intersection.coords;
+		const normal = intersection.normal;
+
+		const lightSample = this.sampleLight();	// 采样面积光
+		const lightPoint = lightSample.coords;
+
+		const lightDistance = hitPoint.distanceTo(lightPoint);
+
+		const lightDir = new Vector3().subVectors(lightPoint, hitPoint).normalize();
+		const lightRay = new Ray(hitPoint, lightDir);
+
+		// 往光源方向投射
+		const lightIntersection = this.intersect(lightRay);
+
+		if (!lightIntersection) {
+
+			return color;
+
+		}
+
+		if ((lightIntersection.distance - lightDistance) <= -0.001) {
+
+			return color;
+
+		}
+
+		// 反射率 brdf
+
+		const material = intersection.material;
+
+		const wo = ray.direction.clone().negate();
+		const wi = lightDir;
+		const N = normal;
+
+		const brdf = material.eval(wo, wi, N);
+
+		// 辐照度 Irradiance
+
+		const emmission = lightSample.emmission;
+
+		const pdf = lightSample.pdf;
+
+		const lightNormal = lightSample.normal;
+		const light2Point = lightDir.clone().negate();
+
+		const attenuation = lightDistance * lightDistance;
+
+		color.copy(emmission);
+		color.multiplyScalar(Math.max(0, lightNormal.dot(light2Point)));
+		color.divideScalar(attenuation);
+		color.divideScalar(pdf);
+
+		// 辐射率 Radiance
+
+		color.multiply(brdf);
+		color.multiplyScalar(Math.max(0, normal.dot(lightDir)));
+
+		return color;
+
+	}
+
+	indirect(directRay, directIntersection) {
+
+		const color = new Vector3();
+
+		const prr = Math.random(); // prr = probability RussianRoulette
+
+		if (prr > this.russianRoulette) {
+
+			return color;
+
+		}
+
+		const hitPoint = directIntersection.coords;
+
+		const directMaterial = directIntersection.material;
+		const directNormal = directIntersection.normal;
+
+		const indirectDirection = directMaterial.sample(directNormal);
+
+		const indirectRay = new Ray(hitPoint, indirectDirection);
+		const indirectIntersection = this.intersect(indirectRay);
+
+		if (!indirectIntersection) {
+
+			return color;
+
+		}
+
+		const indirectMaterial = indirectIntersection.material;
+
+		if (indirectMaterial.hasEmission()) {
+
+			return color;
+
+		}
+
+		const wo = directRay.direction.clone().negate();
+		const wi = indirectDirection;
+		const N = directNormal;
+
+		const pdf = directMaterial.pdf(wo, wi, N);
+
+		// 辐照度 Irradiance
+
+		const emmission = this.castRay(indirectRay);
+		emmission.divideScalar(pdf);
+
+		// 反射率 brdf
+
+		const brdf = indirectMaterial.eval(wo, wi, N);
+
+		// 辐射率 Radiance
+
+		color.copy(emmission);
+		color.multiply(brdf);
+		color.multiplyScalar(Math.max(0, directNormal.dot(indirectDirection)));
+		color.divideScalar(this.russianRoulette);
+
+		return color;
+
+	}
+
 	castRay(ray) {
 
 		const intersection = this.intersect(ray);
 
-		if (!intersection.happened) {
+		if (!intersection) {
 
 			return this.backgroundColor.clone();
 
 		}
 
-		if (intersection.m.hasEmission()) {
+		if (intersection.material.hasEmission()) {
 
-			return intersection.m.getEmission();
-
-		}
-
-		const L_dir = new THREE.Vector3();
-
-		const L_dir_Inter = this.sampleLight();
-
-		let pdf_light = L_dir_Inter.pdf;
-
-		const p = intersection.coords;
-
-		const x = L_dir_Inter.coords;
-
-		const wo = ray.direction;
-
-		const ws = x.clone().sub(p).normalize();
-
-		const p_2_light_ray = new Ray(p, ws);
-		const p_2_light_inter = this.intersect(p_2_light_ray);
-
-		if (p_2_light_inter.distance - x.distanceTo(p) > -0.005) {
-
-			const f_r = intersection.m.eval(wo, ws, intersection.normal);
-
-			const distance2 = x.distanceTo(p) * x.distanceTo(p);
-
-			L_dir.copy(L_dir_Inter.emit);
-			L_dir.multiply(f_r);
-			L_dir.multiplyScalar(ws.dot(intersection.normal));
-			L_dir.multiplyScalar(ws.clone().negate().dot(L_dir_Inter.normal));
-			L_dir.divideScalar(distance2);
-			L_dir.divideScalar(pdf_light);
+			return intersection.material.getEmission().clone();
 
 		}
 
-		const L_indir = new THREE.Vector3();
+		ray.intersection = true;
 
-		if (Math.random() <= this.russianRoulette) {
+		// 直接光照
+		const directColor = this.direct(ray, intersection);
 
-			L_indir.set(0.1, 0.1, 0.1);
+		// 间接光照
+		const indirectColor = this.indirect(ray, intersection);
 
-			const wi = intersection.m.sample(intersection.normal).normalize();
-
-			const L_indir_Ray = new Ray(p, wi);
-
-			const L_indir_Inter = this.intersect(L_indir_Ray);
-
-			if (L_indir_Inter.happened && !L_indir_Inter.m.hasEmission()) {
-
-				const pdf = intersection.m.pdf(wo, wi, intersection.normal);
-
-				L_indir.copy(this.castRay(L_indir_Ray));
-				L_indir.multiply(L_indir_Inter.m.eval(wo, wi, intersection.normal));
-				L_indir.multiplyScalar(wi.dot(intersection.normal));
-				L_indir.divideScalar(pdf);
-				L_indir.divideScalar(this.russianRoulette);
-
-			}
-
-		}
-
-		return L_dir.add(L_indir);
+		return directColor.add(indirectColor);
 
 	}
 
 }
+
+export { Scene };

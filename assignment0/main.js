@@ -18,7 +18,7 @@ function main() {
 
 	vector3.applyMatrix3(matrix);
 
-	console.log(vector3.x, vector3.y, vector3.z);
+	alert(`${vector3.x}\n${vector3.y}\n${vector3.z}`);
 
 }
 

@@ -59,9 +59,9 @@ class View {
 
 			}
 
-			this.pixels[ii] = color.x;
-			this.pixels[ii + 1] = color.y;
-			this.pixels[ii + 2] = color.z;
+			this.pixels[ii] = color.x * 255;
+			this.pixels[ii + 1] = color.y * 255;
+			this.pixels[ii + 2] = color.z * 255;
 			this.pixels[ii + 3] = 255;
 
 		}
@@ -73,7 +73,7 @@ class View {
 	/** 绘制点 */
 	point(coord, size, color) {
 
-		this.context.fillStyle = `rgb( ${color.x}, ${color.y}, ${color.z} )`;
+		this.context.fillStyle = `rgb( ${color.x * 255}, ${color.y * 255}, ${color.z * 255} )`;
 
 		this.context.beginPath();
 
@@ -86,7 +86,7 @@ class View {
 	/** 绘制线段 */
 	line(start, end, width, color) {
 
-		this.context.strokeStyle = `rgb( ${color.x}, ${color.y}, ${color.z} )`;
+		this.context.strokeStyle = `rgb( ${color.x * 255}, ${color.y * 255}, ${color.z * 255} )`;
 		this.context.lineWidth = width;
 
 		this.context.beginPath();
@@ -104,9 +104,9 @@ class View {
 		const imageData = this.context.getImageData(coord.x, coord.y, 1, 1);
 		const pixels = imageData.data;
 
-		target.x = pixels[0];
-		target.y = pixels[1];
-		target.z = pixels[2];
+		target.x = pixels[0] / 255;
+		target.y = pixels[1] / 255;
+		target.z = pixels[2] / 255;
 
 		return target;
 
@@ -115,7 +115,7 @@ class View {
 	/** 绘制像素 */
 	drawPixel(coord, color) {
 
-		this.context.fillStyle = `rgb( ${color.x}, ${color.y}, ${color.z} )`;
+		this.context.fillStyle = `rgb( ${color.x * 255}, ${color.y * 255}, ${color.z * 255} )`;
 
 		this.context.fillRect(coord.x, coord.y, 1, 1);
 

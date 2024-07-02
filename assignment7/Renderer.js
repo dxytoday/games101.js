@@ -1,145 +1,109 @@
-import * as THREE from '../math/three.js';
+import { Vector3, MathUtils } from '../libs/index.js';
 import { Ray } from './Ray.js';
+import { Scene } from './Scene.js';
+import { Material } from './Material.js';
+import { Mesh } from './Mesh.js';
 
-class hit_payload {
+const eye_pos = new Vector3(278, 273, -800);
 
-	tNear = Infinity;
-	index;
-	hit_obj;
-	uv = new THREE.Vector2();
-	normal = new THREE.Vector3();
+const scene = new Scene();
+const rays = [];
+
+function init(data) {
+
+	// init scene
+
+	const red = new Material(new Vector3(0.63, 0.065, 0.05), new Vector3(0, 0, 0));
+	const green = new Material(new Vector3(0.14, 0.45, 0.091), new Vector3(0, 0, 0));
+	const white = new Material(new Vector3(0.725, 0.71, 0.68), new Vector3(0, 0, 0));
+	const light = new Material(new Vector3(0.65, 0.65, 0.65), new Vector3(47.8348, 38.5664, 31.0808));
+
+	red.roughness = 0.1;
+	red.metalness = 0;
+
+	scene.add(new Mesh(data.floor, white));
+	scene.add(new Mesh(data.shortbox, white));
+	scene.add(new Mesh(data.tallbox, white));
+	scene.add(new Mesh(data.left, red));
+	scene.add(new Mesh(data.right, green));
+	scene.add(new Mesh(data.light, light));
+
+	scene.buildBVH();
+
+	// init rays
+
+	const { width, height } = data;
+
+	const scale = Math.tan(scene.fov * 0.5 * MathUtils.DEG2RAD);
+	const imageAspectRatio = width / height;
+
+	for (let py = 0; py < height; py++) {
+
+		for (let px = 0; px < width; px++) {
+
+			const x = (2 * ((px + 0.5) / width) - 1) * scale * imageAspectRatio;
+			const y = (1 - 2 * ((py + 0.5) / height)) * scale;
+
+			// 旋转了 180 度
+			const direction = new Vector3(-x, y, 1).normalize();
+
+			rays.push(new Ray(eye_pos, direction));
+
+		}
+
+	}
+
+	self.postMessage({ type: 'inited' });
 
 }
 
-function refract(I, N, ior) {
+function render(spp, start, end) {
 
-	const result = new THREE.Vector3(0, 0, 0);
+	for (let ri = start; ri < end; ri++) {
 
-	let cosi = THREE.MathUtils.clamp(I.dot(N), -1, 1);
+		const ray = rays[ri];
 
-	let etai = 1;
-	let etat = ior;
+		const pixel = new Vector3();
 
-	const n = N.clone();
+		let si = 0;
 
-	if (cosi < 0) {
+		for (; si < spp; si++) {
 
-		cosi = -cosi;
+			ray.intersection = false;
 
-	} else {
+			pixel.add(scene.castRay(ray));
 
-		etai = ior;
-		etat = 1;
+			if (!ray.intersection) {
 
-		n.negate();
-
-	}
-
-	const eta = etai / etat;
-	const k = 1 - eta * eta * (1 - cosi * cosi);
-
-	if (k >= 0) {
-
-		result.addScaledVector(I, eta);
-		result.addScaledVector(n, eta * cosi - Math.sqrt(k));
-
-	}
-
-	return result;
-}
-
-function fresnel(I, N, ior) {
-
-	let cosi = THREE.MathUtils.clamp(I.dot(N), -1, 1);
-
-	let etai = 1;
-	let etat = ior;
-
-	if (cosi > 0) {
-
-		etai = ior;
-		etat = 1;
-
-	}
-
-	const sint = etai / etat * Math.sqrt(Math.max(0, 1 - cosi * cosi));
-
-	if (sint >= 1) {
-
-		return 1;
-
-	}
-
-	const cost = Math.sqrt(Math.max(0, 1 - sint * sint));
-
-	cosi = Math.abs(cosi);
-
-	const Rs = ((etat * cosi) - (etai * cost)) / ((etat * cosi) + (etai * cost));
-	const Rp = ((etai * cosi) - (etat * cost)) / ((etai * cosi) + (etat * cost));
-
-	return (Rs * Rs + Rp * Rp) / 2;
-
-}
-
-function trace(origin, direction, objects) {
-
-	const payload = new hit_payload();
-
-	for (const object of objects) {
-
-		object.intersect(origin, direction, payload);
-
-	}
-
-	return payload;
-
-}
-
-export class Renderer {
-
-	frameBuffer = [];
-
-	render(scene) {
-
-		const { width, height } = scene;
-
-		const scale = Math.tan(THREE.MathUtils.DEG2RAD * scene.fov * 0.5);
-		const aspect = width / height;
-
-		const eye_pos = new THREE.Vector3(278, 273, -800);
-
-		const spp = 16;
-
-		let index = 0;
-
-		for (let py = 0; py < height; py++) {
-
-			for (let px = 0; px < width; px++) {
-
-				console.log(px, py);
-
-				const x = (2 * ((px + 0.5) / width) - 1) * scale * aspect;
-				const y = (1 - 2 * ((py + 0.5) / height)) * scale;
-
-				const direction = new THREE.Vector3(-x, y, 1).normalize(); // 绕 y 轴旋转 -PI
-
-				const ray = new Ray(eye_pos, direction);
-
-				const pixel = new THREE.Vector3();
-
-				for (let ii = 0; ii < spp; ii++) {
-
-					const color = scene.castRay(ray);
-
-					pixel.addScaledVector(color, 1 / spp);
-
-				}
-
-				this.frameBuffer[index++] = pixel;
+				break;
 
 			}
 
 		}
+
+		self.postMessage({ index: ri, color: pixel.divideScalar(si + 1) });
+
+	}
+
+	self.postMessage({ type: 'finished' });
+
+}
+
+self.onmessage = function ({ data }) {
+
+	if (data.type === 'init') {
+
+		init(data.data);
+
+		return;
+
+	}
+
+	else if (data.type === 'render') {
+
+		const { spp, start, end } = data;
+
+		render(spp, start, end);
 
 	}
 

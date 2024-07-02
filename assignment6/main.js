@@ -1,4 +1,4 @@
-import { Vector3, OBJLoader, Matrix4 } from 'three';
+import { Vector3, OBJLoader, OrbitControls } from 'three';
 import { View } from 'View';
 import { Scene } from './Scene.js';
 import { Mesh } from './Mesh.js';
@@ -21,28 +21,21 @@ async function main() {
 
 	const r = new Renderer();
 
-	let angel = 0;
+	const camera = new OrbitControls(view.canvas, new Vector3(-1, 10, 10), new Vector3(-3, 6, 0));
 
-	const eye_pos_def = new Vector3(-1, 10, 10);
-	const eye_target = new Vector3(-3, 6, 0);
-	const eye_up = new Vector3(0, 1, 0);
+	function render() {
 
-	const matrix = new Matrix4();
-	const eye_pos = new Vector3();
+		if (!camera.changed) {
 
-	function render(delta) {
+			return;
 
-		angel = (angel + delta * 45) % 360;
+		}
 
-		matrix.makeRotationAxis(eye_up, angel / 180 * Math.PI);
+		camera.changed = false;
 
-		eye_pos.subVectors(eye_pos_def, eye_target);
-		eye_pos.applyMatrix4(matrix);
-		eye_pos.add(eye_target);
+		scene.enablePathTracing = !camera.start;
 
-		matrix.lookAt(eye_pos, eye_target, eye_up);
-
-		r.render(scene, eye_pos, matrix);
+		r.render(scene, camera.position, camera.matrix);
 
 		view.fill(r.frameBuffer);
 

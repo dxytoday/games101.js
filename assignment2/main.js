@@ -78,13 +78,13 @@ function main() {
 
 	const cols = [
 
-		new Vector3(255, 0, 0),
-		new Vector3(0, 255, 0),
-		new Vector3(0, 0, 255),
+		new Vector3(1, 0, 0),
+		new Vector3(0, 1, 0),
+		new Vector3(0, 0, 1),
 
-		new Vector3(0, 255, 255),
-		new Vector3(255, 0, 255),
-		new Vector3(255, 255, 0),
+		new Vector3(0, 1, 1),
+		new Vector3(1, 0, 1),
+		new Vector3(1, 1, 0),
 
 	];
 

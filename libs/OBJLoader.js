@@ -1,26 +1,77 @@
 const _face_vertex_data_separator_pattern = /\s+/;
 
+const _caches = new Map();
+
 class OBJLoader {
 
-	async loadFile(url) {
+	loadFile(url) {
 
-		const response = await fetch(url);
+		return new Promise(
 
-		let text = await response.text();
+			async function (resolve, reject) {
 
-		if (text.indexOf('\r\n') !== - 1) {
+				let cache = _caches.get(url);
 
-			text = text.replace(/\r\n/g, '\n');
+				if (!cache) {
 
-		}
+					cache = {
 
-		if (text.indexOf('\\\n') !== - 1) {
+						state: 'none',
+						callbacks: [],
+						text: '',
 
-			text = text.replace(/\\\n/g, '');
+					};
 
-		}
+					_caches.set(url, cache);
 
-		return text;
+				}
+
+				if (cache.state === 'loaded') {
+
+					resolve(cache.text);
+
+					return;
+
+				}
+
+				cache.callbacks.push(resolve);
+
+				if (cache.state === 'loading') {
+
+					return;
+
+				}
+
+				cache.state = 'loading';
+
+				const response = await fetch(url);
+
+				let text = await response.text();
+
+				if (text.indexOf('\r\n') !== - 1) {
+
+					text = text.replace(/\r\n/g, '\n');
+
+				}
+
+				if (text.indexOf('\\\n') !== - 1) {
+
+					text = text.replace(/\\\n/g, '');
+
+				}
+
+				cache.text = text;
+				cache.state = 'loaded';
+
+				for (const callback of cache.callbacks) {
+
+					callback(text);
+
+				}
+
+			}
+
+		);
 
 	}
 

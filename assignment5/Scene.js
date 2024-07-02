@@ -8,7 +8,7 @@ class Scene {
 	height = 0;
 
 	fov = 90;
-	backgroundColor = new Vector3(60, 172, 215);
+	backgroundColor = new Vector3(0.235294, 0.67451, 0.843137);
 
 	maxDepth = 5;
 	epsilon = 0.00001;

@@ -1,60 +1,201 @@
-import * as THREE from '../math/three.js';
-import { Material, MaterialType } from './Material.js';
-import { Scene } from './Scene.js';
-import { Mesh } from './Mesh.js';
-import { OBJLoader } from './OBJLoader.js';
-import { Renderer } from './Renderer.js';
+import { OBJLoader, Vector3 } from 'three';
+import { View } from 'View';
 
-export default async function main(width, height, showBuffer) {
+const _spp = 512;
 
-	const scene = new Scene(width, height);
+const pixels = [];
+const renderers = [];
 
-	const red = new Material(MaterialType.DIFFUSE, new THREE.Vector3(0, 0, 0));
-	red.Kd = new THREE.Vector3(0.63, 0.065, 0.05);
+function loadObjFiles() {
 
-	const green = new Material(MaterialType.DIFFUSE, new THREE.Vector3(0, 0, 0));
-	green.Kd = new THREE.Vector3(0.14, 0.45, 0.091);
+	return new Promise(
 
-	const white = new Material(MaterialType.DIFFUSE, new THREE.Vector3(0, 0, 0));
-	white.Kd = new THREE.Vector3(0.725, 0.71, 0.68);
+		async function (resolve) {
 
-	const le = new THREE.Vector3();
-	le.addScaledVector(new THREE.Vector3(0.747 + 0.058, 0.747 + 0.258, 0.747), 8.0);
-	le.addScaledVector(new THREE.Vector3(0.740 + 0.287, 0.740 + 0.160, 0.740), 15.6);
-	le.addScaledVector(new THREE.Vector3(0.737 + 0.642, 0.737 + 0.159, 0.737), 18.4);
+			const loader = new OBJLoader();
 
-	const light_m = new Material(MaterialType.DIFFUSE, le);
-	light_m.Kd = new THREE.Vector3().setScalar(0.65);
+			const floor = await loader.load('./assignment7/resources/floor.obj');
+			const shortbox = await loader.load('./assignment7/resources/shortbox.obj');
+			const tallbox = await loader.load('./assignment7/resources/tallbox.obj');
+			const left = await loader.load('./assignment7/resources/left.obj');
+			const right = await loader.load('./assignment7/resources/right.obj');
+			const light = await loader.load('./assignment7/resources/light.obj');
 
-	const floor_obj = await OBJLoader.load('./resources/floor.obj');
-	const floor = new Mesh(floor_obj.positions, white);
-	scene.addObject(floor);
+			resolve(
 
-	const shortbox_obj = await OBJLoader.load('./resources/shortbox.obj');
-	const shortbox = new Mesh(shortbox_obj.positions, white);
-	scene.addObject(shortbox);
+				{
 
-	const tallbox_obj = await OBJLoader.load('./resources/tallbox.obj');
-	const tallbox = new Mesh(tallbox_obj.positions, white);
-	scene.addObject(tallbox);
+					floor: floor.position,
+					shortbox: shortbox.position,
+					tallbox: tallbox.position,
+					left: left.position,
+					right: right.position,
+					light: light.position,
 
-	const left_obj = await OBJLoader.load('./resources/left.obj');
-	const left = new Mesh(left_obj.positions, red);
-	scene.addObject(left);
+				}
 
-	const right_obj = await OBJLoader.load('./resources/right.obj');
-	const right = new Mesh(right_obj.positions, green);
-	scene.addObject(right);
+			);
 
-	const light_obj = await OBJLoader.load('./resources/light.obj');
-	const light = new Mesh(light_obj.positions, light_m);
-	scene.addObject(light);
+		}
 
-	scene.buildBVH();
-
-	const r = new Renderer();
-	r.render(scene);
-
-	showBuffer(r.frameBuffer);
+	);
 
 }
+
+function loadRenderers(width, height) {
+
+	const rendererNumber = 20;
+
+	return new Promise(
+
+		async function (resolve) {
+
+			const ObjData = await loadObjFiles();
+
+			for (let ii = 0; ii < rendererNumber; ii++) {
+
+				renderers.push(
+
+					new Worker('../assignment7/Renderer.js', { type: 'module' })
+
+				);
+
+			}
+
+			let complete = 0;
+
+			const initData = {
+
+				width: width,
+				height: height,
+
+				...ObjData,
+
+			};
+
+			for (const renderer of renderers) {
+
+				renderer.onmessage = function () {
+
+					renderer.onmessage = onRenderComplete;
+
+					complete++;
+
+					if (complete === renderers.length) {
+
+						resolve();
+
+					}
+
+				}
+
+				renderer.postMessage({ type: 'init', data: initData });
+
+			}
+
+		}
+
+	);
+
+}
+
+function render(camera, spp = 1) {
+
+	const unit = 500;
+	let count = 0;
+
+	let complete = 0;
+
+	function workerMessage(event) {
+
+		if (event.data.type !== 'finished') {
+
+			onRenderComplete(event);
+
+			return;
+
+		}
+
+		const worker = event.srcElement;
+
+		if (count >= pixels.length) {
+
+			complete++;
+
+			if (complete === renderers.length) {
+
+				if (spp !== _spp) {
+
+					render(camera, _spp);
+
+				} else {
+
+					// 渲染结束
+
+				}
+
+			}
+
+			return;
+
+		}
+
+		const start = count;
+		const end = Math.min(pixels.length, count += unit);
+
+		worker.postMessage({
+
+			type: 'render',
+			spp: spp,
+			start: start,
+			end: end,
+
+		});
+
+	}
+
+	for (const renderer of renderers) {
+
+		renderer.onmessage = workerMessage;
+
+		workerMessage({ data: { type: 'finished' }, srcElement: renderer });
+
+	}
+
+}
+
+function onRenderComplete({ data }) {
+
+	pixels[data.index].copy(data.color);
+
+}
+
+async function main() {
+
+	const view = new View();
+
+	const { width, height } = view;
+
+	await loadRenderers(width, height);
+
+	for (let ii = 0, il = width * height; ii < il; ii++) {
+
+		pixels.push(new Vector3());
+
+	}
+
+	render();
+
+	view.startRenderLoop(
+
+		function () {
+
+			view.fill(pixels);
+
+		}
+
+	);
+
+}
+
+export { main };

@@ -188,7 +188,7 @@ class Rasterizer {
 		const segments = Math.max(segment_x, segment_y);
 
 		const point = new Vector2();
-		const color = new Vector3(255, 255, 255);
+		const color = new Vector3(1, 1, 1);
 
 		for (let ii = 0; ii < segments; ii++) {
 

@@ -15,7 +15,7 @@ class Mesh {
 	material = new Material(
 
 		DIFFUSE_AND_GLOSSY,
-		new Vector3(128, 128, 128),
+		new Vector3(0.5, 0.5, 0.5),
 		new Vector3(0, 0, 0),
 
 	);

@@ -119,8 +119,8 @@ class Mesh extends Object {
 		const scale = 5;
 		const pattern = (st.x * scale % 1) > 0.5 ^ st.y * scale % 1 > 0.5;
 
-		const c1 = new Vector3(208, 60, 8);
-		const c2 = new Vector3(239, 239, 59);
+		const c1 = new Vector3(0.815, 0.235, 0.031);
+		const c2 = new Vector3(0.937, 0.937, 0.231);
 
 		return new Vector3().lerpVectors(c1, c2, pattern);
 

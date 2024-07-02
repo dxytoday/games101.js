@@ -1,65 +1,82 @@
-import * as THREE from '../math/three.js';
-
-export const MaterialType = {
-
-	DIFFUSE: 0,
-
-};
+import { Vector3 } from '../libs/index.js';
 
 const EPSILON = 0.00001;
 
-export class Material {
+function toWorld(a, N) {
 
-	m_type;
-	m_emmission;
+	const B = new Vector3();
+	const C = new Vector3();
 
-	Kd;
-	Ks;
+	if (Math.abs(N.x) > Math.abs(N.y)) {
 
-	constructor(t, e) {
+		const invLen = 1.0 / Math.sqrt(N.x * N.x + N.z * N.z);
 
-		this.m_type = t;
-		this.m_emmission = e;
+		C.set(N.z * invLen, 0.0, -N.x * invLen);
+
+	} else {
+
+		const invLen = 1.0 / Math.sqrt(N.y * N.y + N.z * N.z);
+
+		C.set(0.0, N.z * invLen, -N.y * invLen);
+
+	}
+
+	B.crossVectors(C, N);
+
+	const v = new Vector3();
+	v.addScaledVector(B, a.x);
+	v.addScaledVector(C, a.y);
+	v.addScaledVector(N, a.z);
+
+	return v;
+
+}
+
+class Material {
+
+	emmission = undefined;
+
+	Kd = undefined;
+
+	constructor(Kd, emmission) {
+
+		this.Kd = Kd;
+
+		this.emmission = emmission;
 
 	}
 
 	hasEmission() {
 
-		return this.m_emmission && this.m_emmission.length() > EPSILON;
+		return this.emmission && this.emmission.length() > EPSILON;
 
 	}
 
 	getEmission() {
 
-		return this.m_emmission;
+		return this.emmission;
 
 	}
 
-	eval(wi, wo, N) {
+	/** brdf */
+	eval(wo, wi, N) {
 
-		// DIFFUSE
+		const diffuse = new Vector3();
 
-		// calculate the contribution of diffuse   model
-
-		const cosalpha = N.dot(wo);
-		const diffuse = new THREE.Vector3();
-
-		if (cosalpha > 0) {
-
-			diffuse.copy(this.Kd);
-			diffuse.divideScalar(Math.PI);
-
-		}
+		diffuse.copy(this.Kd);
+		diffuse.divideScalar(Math.PI);
 
 		return diffuse;
 
 	}
 
+	pdf(wo, wi, N) {
+
+		return 0.5 / Math.PI;
+
+	}
+
 	sample(N) {
-
-		// DIFFUSE
-
-		// uniform sample on the hemisphere
 
 		const x_1 = Math.random();
 		const x_2 = Math.random();
@@ -70,50 +87,14 @@ export class Material {
 
 		const phi = 2 * Math.PI * x_2;
 
-		const localRay = new THREE.Vector3(r * Math.cos(phi), r * Math.sin(phi), z);
+		const localRay = new Vector3(r * Math.cos(phi), r * Math.sin(phi), z);
 
-		const B = new THREE.Vector3();
-		const C = new THREE.Vector3();
+		return toWorld(localRay, N);
 
-		if (Math.abs(N.x) > Math.abs(N.y)) {
-
-			const invLen = 1.0 / Math.sqrt(N.x * N.x + N.z * N.z);
-
-			C.set(N.z * invLen, 0.0, -N.x * invLen);
-
-		} else {
-
-			const invLen = 1.0 / Math.sqrt(N.y * N.y + N.z * N.z);
-
-			C.set(0.0, N.z * invLen, -N.y * invLen);
-
-		}
-
-		B.crossVectors(C, N);
-
-
-		const v = new THREE.Vector3();
-		v.addScaledVector(B, localRay.x);
-		v.addScaledVector(C, localRay.y);
-		v.addScaledVector(N, localRay.z);
-
-		return v;
-
-	}
-
-	pdf(wi, wo, N) {
-
-		// DIFFUSE
-
-		// uniform sample probability 1 / (2 * PI)
-
-		if (wo.dot(N) > 0) {
-
-			return 0.5 / Math.PI;
-
-		}
-
-		return 0;
 	}
 
 }
+
+export { Material };
+
+

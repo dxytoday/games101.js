@@ -10,7 +10,7 @@ class Scene {
 	height = 0;
 
 	fov = 90;
-	backgroundColor = new Vector3(60, 172, 215);
+	backgroundColor = new Vector3(0.235294, 0.67451, 0.843137);
 
 	maxDepth = 5;
 	epsilon = 0.00001;
@@ -19,6 +19,8 @@ class Scene {
 	lights = [];
 
 	bvh = undefined;
+
+	enablePathTracing = true;
 
 	constructor(width, height) {
 
@@ -75,6 +77,14 @@ class Scene {
 		const material = intersection.material;
 		const N = intersection.normal;
 
+		const diffuseColor = material.getColor().clone();
+
+		if (!this.enablePathTracing) {
+
+			return diffuseColor;
+
+		}
+
 		// DIFFUSE_AND_GLOSSY 
 
 		let kd = 0;
@@ -116,8 +126,6 @@ class Scene {
 			}
 
 		}
-
-		const diffuseColor = material.getColor().clone();
 
 		const color = new Vector3();
 		color.addScaledVector(diffuseColor, kd);

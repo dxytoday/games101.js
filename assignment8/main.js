@@ -17,8 +17,8 @@ function main() {
 	const ropeEuler = new Rope(start, end, 16, mass, ks, [0]);
 	const ropeVerlet = new Rope(start, end, 16, mass, ks, [0]);
 
-	ropeEuler.color.set(0, 0, 255);
-	ropeVerlet.color.set(0, 255, 0);
+	ropeEuler.color.set(0, 0, 1);
+	ropeVerlet.color.set(0, 1, 0);
 
 	const ropes = [ropeEuler, ropeVerlet];
 

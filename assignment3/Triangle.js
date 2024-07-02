@@ -3,6 +3,7 @@ class Triangle {
 	v = [];
 	tex_coords = [];
 	normal = [];
+	color = [];
 
 	mv = [];
 
@@ -21,6 +22,16 @@ class Triangle {
 	setTexCoord(ind, uv) {
 
 		this.tex_coords[ind] = uv;
+
+	}
+
+	setColor(ind, color) {
+
+		color.x /= 255;
+		color.y /= 255;
+		color.z /= 255;
+
+		this.color[ind] = color;
 
 	}
 

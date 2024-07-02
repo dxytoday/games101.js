@@ -27,7 +27,7 @@ function naive_bezier(points, w) {
 	const p_3 = points[3];
 
 	const point = new Vector2();
-	const color = new Vector3(255, 0, 0);
+	const color = new Vector3(1, 0, 0);
 
 	for (let t = 0.0; t <= 1.0; t += 0.001) {
 
@@ -112,7 +112,7 @@ function anti_aliasing(point, w) {
 
 			const color = w.readPixel(newPoint);
 
-			color.y = Math.max(color.y, 255 * ratio);
+			color.y = Math.max(color.y, ratio);
 
 			w.drawPixel(newPoint, color);
 
@@ -134,7 +134,7 @@ function main() {
 
 		for (const point of control_points) {
 
-			const color = new Vector3(255, 255, 255);
+			const color = new Vector3(1, 1, 1);
 			view.point(point, 5, color);
 
 		}

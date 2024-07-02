@@ -43,9 +43,9 @@ class Texture {
 
 		const index = ((this.height - 1 - y) * this.width + x) * 4;
 
-		target.x = this.imageData.data[index];
-		target.y = this.imageData.data[index + 1];
-		target.z = this.imageData.data[index + 2];
+		target.x = this.imageData.data[index] / 255;
+		target.y = this.imageData.data[index + 1] / 255;
+		target.z = this.imageData.data[index + 2] / 255;
 
 		return target;
 

@@ -109,7 +109,7 @@ function computeBarycentric2D(x, y, v) {
 
 function interpolate(alpha, beta, gamma, vert1, vert2, vert3, weight, target) {
 
-	target.multiplyScalar(0);
+	target.setScalar(0);
 
 	const v = target.clone();
 
@@ -255,6 +255,10 @@ class Rasterizer {
 
 			}
 
+			newtri.setColor(0, new Vector3(148, 121, 92));
+			newtri.setColor(1, new Vector3(148, 121, 92));
+			newtri.setColor(2, new Vector3(148, 121, 92));
+
 			this.rasterize_triangle(newtri);
 
 		}
@@ -329,8 +333,8 @@ class Rasterizer {
 				interpolate(alpha, beta, gamma, t.normal[0], t.normal[1], t.normal[2], 1, normal);
 				interpolate(alpha, beta, gamma, t.tex_coords[0], t.tex_coords[1], t.tex_coords[2], 1, uv);
 				interpolate(alpha, beta, gamma, t.mv[0], t.mv[1], t.mv[2], 1, mvPosition);
+				interpolate(alpha, beta, gamma, t.color[0], t.color[1], t.color[2], 1, payload.color);
 
-				payload.color.set(0, 0, 0);
 				payload.normal = normal.normalize();
 				payload.mvPosition = mvPosition;
 				payload.uv = uv;

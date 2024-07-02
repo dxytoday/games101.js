@@ -1,41 +1,48 @@
-import * as THREE from '../math/three.js';
+import { Vector3 } from '../libs/index.js';
 import { BVHAccel } from './BVHAccel.js';
 import { Bounds3 } from './Bounds3.js';
-import { Intersection } from './Intersection.js';
-import { Material, MaterialType } from './Material.js';
 import { Triangle } from './Triangle.js';
 
-export class Mesh {
+class Mesh {
 
-	bounds = new Bounds3();
+	bounding_box = new Bounds3();
+
 	triangles = [];
-	bvh;
 
-	m;
+	bvh = undefined;
+
+	material = undefined;
+
 	area = 0;
 
-	constructor(positions, m) {
+	constructor(positions, material) {
 
-		this.m = m;
+		this.material = material;
 
-		const len = positions.length;
+		const v1 = new Vector3();
+		const v2 = new Vector3();
+		const v3 = new Vector3();
 
-		for (let ii = 0; ii < len; ii += 3) {
+		for (let ii = 0, il = positions.length / 3; ii < il; ii += 3) {
 
-			this.bounds.expandByPoint(positions[ii]);
-			this.bounds.expandByPoint(positions[ii + 1]);
-			this.bounds.expandByPoint(positions[ii + 2]);
+			v1.fromArray(positions, ii * 3);
+			v2.fromArray(positions, (ii + 1) * 3);
+			v3.fromArray(positions, (ii + 2) * 3);
+
+			this.bounding_box.expandByPoint(v1);
+			this.bounding_box.expandByPoint(v2);
+			this.bounding_box.expandByPoint(v3);
 
 			const triangle = new Triangle(
 
-				positions[ii],
-				positions[ii + 1],
-				positions[ii + 2],
-				m,
+				v1.clone(),
+				v2.clone(),
+				v3.clone(),
+				this.material
 
 			);
 
-			this.area += triangle.area;
+			this.area += triangle.getArea();
 
 			this.triangles.push(triangle);
 
@@ -45,23 +52,15 @@ export class Mesh {
 
 	}
 
-	getIntersection(ray) {
+	hasEmission() {
 
-		let intersec;
-
-		if (this.bvh) {
-
-			intersec = this.bvh.intersect(ray);
-
-		}
-
-		return intersec;
+		return this.material.hasEmission();
 
 	}
 
-	hasEmit() {
+	getBounds() {
 
-		return this.m.hasEmission();
+		return this.bounding_box;
 
 	}
 
@@ -71,16 +70,34 @@ export class Mesh {
 
 	}
 
-	sample() {
+	areaSampling() {
 
-		const pos = new Intersection();
+		const sample = this.bvh.areaSampling();
 
-		this.bvh.sample(pos);
+		sample.emmission = this.material.getEmission();
 
-		pos.emit = this.m.getEmission();
+		return sample;
 
-		return pos;
+	}
+
+	getIntersection(ray) {
+
+		if (this.bvh) {
+
+			const intersection = this.bvh.intersect(ray);
+
+			if (intersection) {
+
+				intersection.mesh = this;
+
+			}
+
+			return intersection;
+
+		}
 
 	}
 
 }
+
+export { Mesh };

@@ -90,7 +90,6 @@ function normal_fragment_shader(payload) {
 	color.normalize();
 	color.addScalar(1);
 	color.divideScalar(2);
-	color.multiplyScalar(255);
 
 }
 
@@ -139,6 +138,7 @@ function texture_fragment_shader(payload) {
 
 	texture.getColorBilinear(uv.x, uv.y, texel);
 
+	color.setScalar(0);
 	color.addScaledVector(texel, ka);
 	color.addScaledVector(texel, kd);
 	color.addScaledVector(texel, ks);
@@ -184,7 +184,9 @@ function phong_fragment_shader(payload) {
 
 	}
 
-	const texel = new Vector3(148, 121, 92);
+	const texel = color.clone();
+
+	color.setScalar(0);
 	color.addScaledVector(texel, ka);
 	color.addScaledVector(texel, kd);
 	color.addScaledVector(texel, ks);
@@ -196,6 +198,8 @@ function displacement_fragment_shader(payload) {
 	const color = payload.color;
 	const normal = payload.normal;
 	const mvPosition = payload.mvPosition
+
+	const texel = color.clone();
 
 	const uv = payload.uv;
 	const texture = payload.texture;
@@ -220,12 +224,12 @@ function displacement_fragment_shader(payload) {
 	const { x: u, y: v } = uv;
 	const { width: w, height: h } = texture;
 
-	const len = texture.getColor(u, v, color).length();
+	const len = texture.getColor(u, v, color).length() * 255;
 
-	const len1 = texture.getColor(u + 1 / w, v, color).length();
+	const len1 = texture.getColor(u + 1 / w, v, color).length() * 255;
 	const dU = kh * kn * (len1 - len);
 
-	const len2 = texture.getColor(u, v + 1 / h, color).length();
+	const len2 = texture.getColor(u, v + 1 / h, color).length() * 255;
 	const dV = kh * kn * (len2 - len);
 
 	mvPosition.add(normal.multiplyScalar(kn * len));
@@ -265,8 +269,8 @@ function displacement_fragment_shader(payload) {
 
 	}
 
-	const texel = new Vector3(148, 121, 92);
-	color.copy(texel).multiplyScalar(ka);
+	color.setScalar(0);
+	color.addScaledVector(texel, ka);
 	color.addScaledVector(texel, kd);
 	color.addScaledVector(texel, ks);
 
@@ -298,18 +302,17 @@ function bump_fragment_shader(payload) {
 	const { x: u, y: v } = uv;
 	const { width: w, height: h } = texture;
 
-	const len = texture.getColor(u, v, color).length();
+	const len = texture.getColor(u, v, color).length() * 255;
 
-	const len1 = texture.getColor(u + 1 / w, v, color).length();
+	const len1 = texture.getColor(u + 1 / w, v, color).length() * 255;
 	const dU = kh * kn * (len1 - len);
 
-	const len2 = texture.getColor(u, v + 1 / h, color).length();
+	const len2 = texture.getColor(u, v + 1 / h, color).length() * 255;
 	const dV = kh * kn * (len2 - len);
 
 	color.set(-dU, -dV, 1);
 	color.applyMatrix4(TBN);
 	color.normalize();
-	color.multiplyScalar(255);
 
 }
 
@@ -352,7 +355,7 @@ async function main() {
 
 	let active_shader = phong_fragment_shader;
 
-	const type = 'phong'; // normal phong texture displacement bump
+	const type = 'normal'; // normal phong texture displacement bump
 
 	if (type === 'texture') {
 

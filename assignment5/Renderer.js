@@ -123,63 +123,211 @@ function trace(origin, direction, objects) {
 
 }
 
-function castRay(orig, dir, scene, depth) {
+class Renderer {
 
-	if (depth > scene.maxDepth) {
+	frameBuffer = [];
 
-		return new Vector3();
+	enablePathTracing = true;
 
-	}
+	render(scene, eye_pos, eye_matrix) {
 
-	const payload = trace(orig, dir, scene.objects);
+		const { width, height } = scene;
 
-	if (!payload) {
+		const scale = Math.tan(deg2rad(scene.fov * 0.5));
+		const imageAspectRatio = width / height;
 
-		return scene.backgroundColor.clone();
+		let m = 0;
 
-	}
+		for (let py = 0; py < height; py++) {
 
-	const hitPoint = orig.clone().addScaledVector(dir, payload.tNear);
-	const hitObject = payload.hit_obj;
+			for (let px = 0; px < width; px++) {
 
-	const { N, st } = hitObject.getSurfaceProperties(hitPoint, payload);
-	const hitColor = hitObject.evalDiffuseColor(st);
+				const x = (2 * ((px + 0.5) / width) - 1) * scale * imageAspectRatio;
+				const y = (1 - 2 * ((py + 0.5) / height)) * scale;
 
-	if (hitObject.materialType === REFLECTION_AND_REFRACTION) {
+				const dir = new Vector3(x, y, -1).normalize();
+				dir.applyMatrix4(eye_matrix);
 
-		const kr = fresnel(dir, N, hitObject.ior);
+				this.frameBuffer[m++] = this.castRay(eye_pos, dir, scene, 0);
 
-		// reflection
+			}
 
-		const reflectionDirection = reflect(dir, N).normalize();
-
-		const reflectionEpsilonDir = Math.sign(reflectionDirection.dot(N)) * scene.epsilon;
-		const reflectionRayOrig = hitPoint.clone().addScaledVector(N, reflectionEpsilonDir);
-
-		const reflectionColor = castRay(reflectionRayOrig, reflectionDirection, scene, depth + 1);
-
-		// refraction
-
-		const refractionDirection = refract(dir, N, hitObject.ior).normalize();
-
-		const refractionEpsilonDir = Math.sign(refractionDirection.dot(N)) * scene.epsilon;
-		const refractionRayOrig = hitPoint.clone().addScaledVector(N, refractionEpsilonDir);
-
-		const refractionColor = castRay(refractionRayOrig, refractionDirection, scene, depth + 1);
-
-		// blend
-
-		hitColor.set(0, 0, 0);
-		hitColor.addScaledVector(reflectionColor, kr);
-		hitColor.addScaledVector(refractionColor, 1 - kr);
+		}
 
 	}
 
-	else if (hitObject.materialType === REFLECTION) {
+	castRay(orig, dir, scene, depth) {
 
-		const directColor = new Vector3();
+		if (depth > scene.maxDepth) {
 
-		{
+			return new Vector3();
+
+		}
+
+		const payload = trace(orig, dir, scene.objects);
+
+		if (!payload) {
+
+			return scene.backgroundColor.clone();
+
+		}
+
+		const hitPoint = orig.clone().addScaledVector(dir, payload.tNear);
+		const hitObject = payload.hit_obj;
+
+		const { N, st } = hitObject.getSurfaceProperties(hitPoint, payload);
+		const hitColor = hitObject.evalDiffuseColor(st);
+
+		if (!this.enablePathTracing) {
+
+			return hitColor;
+
+		}
+
+		if (hitObject.materialType === REFLECTION_AND_REFRACTION) {
+
+			const directColor = new Vector3();
+
+			{
+
+				let ks = 0;
+
+				const epsilonDir = Math.sign(dir.dot(N)) * -1 * scene.epsilon;
+				const shadowPointOrig = hitPoint.clone().addScaledVector(N, epsilonDir);
+
+				for (const light of scene.lights) {
+
+					const lightDir = light.position.clone().sub(hitPoint);
+
+					const distance = lightDir.length();
+
+					lightDir.normalize();
+
+					const shadow_res = trace(shadowPointOrig, lightDir, scene.objects);
+
+					const inShadow = shadow_res && shadow_res.tNear < distance;
+
+					if (!inShadow) {
+
+						const V = new Vector3();
+						const L = new Vector3();
+						const H = new Vector3();
+
+						V.copy(dir).negate().normalize();
+						L.copy(lightDir);
+						H.addVectors(V, L).normalize();
+
+						const NoH = Math.max(0, N.dot(H));
+						const intensity = light.intensity / (distance * distance);
+						ks += intensity * Math.pow(NoH, hitObject.specularExponent);
+
+					}
+
+				}
+
+				directColor.addScaledVector(hitColor, ks);
+
+			}
+
+			// reflection
+
+			const reflectionDirection = reflect(dir, N).normalize();
+
+			const reflectionEpsilonDir = Math.sign(reflectionDirection.dot(N)) * scene.epsilon;
+			const reflectionRayOrig = hitPoint.clone().addScaledVector(N, reflectionEpsilonDir);
+
+			const reflectionColor = this.castRay(reflectionRayOrig, reflectionDirection, scene, depth + 1);
+
+			// refraction
+
+			const refractionDirection = refract(dir, N, hitObject.ior).normalize();
+
+			const refractionEpsilonDir = Math.sign(refractionDirection.dot(N)) * scene.epsilon;
+			const refractionRayOrig = hitPoint.clone().addScaledVector(N, refractionEpsilonDir);
+
+			const refractionColor = this.castRay(refractionRayOrig, refractionDirection, scene, depth + 1);
+
+			// blend
+
+			const kr = fresnel(dir, N, hitObject.ior);
+
+			hitColor.copy(directColor);
+			hitColor.addScaledVector(reflectionColor, kr);
+			hitColor.addScaledVector(refractionColor, 1 - kr);
+
+		}
+
+		else if (hitObject.materialType === REFLECTION) {
+
+			const directColor = new Vector3();
+
+			{
+
+				let kd = 0;
+				let ks = 0;
+
+				const epsilonDir = Math.sign(dir.dot(N)) * -1 * scene.epsilon;
+				const shadowPointOrig = hitPoint.clone().addScaledVector(N, epsilonDir);
+
+				for (const light of scene.lights) {
+
+					const lightDir = light.position.clone().sub(hitPoint);
+
+					const distance = lightDir.length();
+
+					lightDir.normalize();
+
+					const shadow_res = trace(shadowPointOrig, lightDir, scene.objects);
+
+					const inShadow = shadow_res && shadow_res.tNear < distance;
+
+					if (!inShadow) {
+
+						const V = new Vector3();
+						const L = new Vector3();
+						const H = new Vector3();
+
+						V.copy(dir).negate().normalize();
+						L.copy(lightDir);
+						H.addVectors(V, L).normalize();
+
+						const NoL = Math.max(0, N.dot(L));
+						const NoH = Math.max(0, N.dot(H));
+
+						const intensity = light.intensity / (distance * distance);
+
+						kd += intensity * NoL;
+						ks += intensity * Math.pow(NoH, hitObject.specularExponent);
+
+					}
+
+				}
+
+				directColor.addScaledVector(hitColor, kd);
+				directColor.addScaledVector(hitColor, ks);
+
+			}
+
+			const indirectColor = new Vector3();
+
+			{
+
+				const reflectionDirection = reflect(dir, N).normalize();
+
+				const epsilonDir = Math.sign(reflectionDirection.dot(N)) * scene.epsilon;
+				const reflectionRayOrig = hitPoint.clone().addScaledVector(N, epsilonDir);
+
+				const reflectionColor = this.castRay(reflectionRayOrig, reflectionDirection, scene, depth + 1);
+
+				indirectColor.copy(reflectionColor);
+
+			}
+
+			hitColor.addVectors(directColor, indirectColor);
+
+		}
+
+		else if (hitObject.materialType === DIFFUSE_AND_GLOSSY) {
 
 			let kd = 0;
 			let ks = 0;
@@ -221,114 +369,15 @@ function castRay(orig, dir, scene, depth) {
 
 			}
 
-			directColor.addScaledVector(hitColor, kd);
-			directColor.addScaledVector(hitColor, ks);
+			const diffuseColor = hitColor.clone();
+
+			hitColor.set(0, 0, 0);
+			hitColor.addScaledVector(diffuseColor, kd);
+			hitColor.addScaledVector(diffuseColor, ks);
 
 		}
 
-		const indirectColor = new Vector3();
-
-		{
-
-			const reflectionDirection = reflect(dir, N).normalize();
-
-			const epsilonDir = Math.sign(reflectionDirection.dot(N)) * scene.epsilon;
-			const reflectionRayOrig = hitPoint.clone().addScaledVector(N, epsilonDir);
-
-			const reflectionColor = castRay(reflectionRayOrig, reflectionDirection, scene, depth + 1);
-
-			indirectColor.copy(reflectionColor);
-
-		}
-
-		hitColor.addVectors(directColor, indirectColor);
-
-	}
-
-	else if (hitObject.materialType === DIFFUSE_AND_GLOSSY) {
-
-		let kd = 0;
-		let ks = 0;
-
-		const epsilonDir = Math.sign(dir.dot(N)) * -1 * scene.epsilon;
-		const shadowPointOrig = hitPoint.clone().addScaledVector(N, epsilonDir);
-
-		for (const light of scene.lights) {
-
-			const lightDir = light.position.clone().sub(hitPoint);
-
-			const distance = lightDir.length();
-
-			lightDir.normalize();
-
-			const shadow_res = trace(shadowPointOrig, lightDir, scene.objects);
-
-			const inShadow = shadow_res && shadow_res.tNear < distance;
-
-			if (!inShadow) {
-
-				const V = new Vector3();
-				const L = new Vector3();
-				const H = new Vector3();
-
-				V.copy(dir).negate().normalize();
-				L.copy(lightDir);
-				H.addVectors(V, L).normalize();
-
-				const NoL = Math.max(0, N.dot(L));
-				const NoH = Math.max(0, N.dot(H));
-
-				const intensity = light.intensity / (distance * distance);
-
-				kd += intensity * NoL;
-				ks += intensity * Math.pow(NoH, hitObject.specularExponent);
-
-			}
-
-		}
-
-		const diffuseColor = hitColor.clone();
-
-		hitColor.set(0, 0, 0);
-		hitColor.addScaledVector(diffuseColor, kd);
-		hitColor.addScaledVector(diffuseColor, ks);
-
-	}
-
-	return hitColor;
-
-}
-
-class Renderer {
-
-	frameBuffer = [];
-
-	render(scene, eye_pos, matrix) {
-
-		const frameBuffer = this.frameBuffer;
-
-		const { width, height } = scene;
-
-		const scale = Math.tan(deg2rad(scene.fov * 0.5));
-		const imageAspectRatio = width / height;
-
-		let m = 0;
-
-		for (let py = 0; py < height; py++) {
-
-			for (let px = 0; px < width; px++) {
-
-				const x = (2 * ((px + 0.5) / width) - 1) * scale * imageAspectRatio;
-				const y = (1 - 2 * ((py + 0.5) / height)) * scale;
-
-				const dir = new Vector3(x, y, -1).normalize();
-				dir.applyMatrix4(matrix);
-
-				frameBuffer[m++] = castRay(eye_pos, dir, scene, 0);
-
-			}
-
-		}
+		return hitColor;
 
 	}
 

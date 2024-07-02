@@ -12,7 +12,7 @@ class Object {
 	ior = 1.3;
 
 	/** 漫反射颜色 */
-	diffuseColor = new Vector3(51, 51, 51);
+	diffuseColor = new Vector3(0.2, 0.2, 0.2);
 
 	// 高光指数
 	specularExponent = 128;
