@@ -88,24 +88,13 @@ class Triangle {
 
 		const t_tmp = this.e2.dot(qvec) * det_inv;
 
-		if (t_tmp < 0) {
 
-			return;
 
-		}
 
-		const intersection = new Intersection();
 
-		intersection.distance = t_tmp;
-		intersection.happened = true;
-		intersection.material = this.material;
-		intersection.object = this;
-		intersection.normal = this.normal;
 
-		intersection.coords = ray.origin.clone();
-		intersection.coords.addScaledVector(ray.direction, t_tmp);
 
-		return intersection;
+
 
 	}
 

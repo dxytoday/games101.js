@@ -55,42 +55,7 @@ class Bounds3 {
 
 	intersectP(ray, invDir, dirIsNeg) {
 
-		let t_Min_x = (this.min.x - ray.origin.x) * invDir.x;
-		let t_Min_y = (this.min.y - ray.origin.y) * invDir.y;
-		let t_Min_z = (this.min.z - ray.origin.z) * invDir.z;
 
-		let t_Max_x = (this.max.x - ray.origin.x) * invDir.x;
-		let t_Max_y = (this.max.y - ray.origin.y) * invDir.y;
-		let t_Max_z = (this.max.z - ray.origin.z) * invDir.z;
-
-		if (!dirIsNeg[0]) {
-
-			const t = t_Min_x;
-			t_Min_x = t_Max_x;
-			t_Max_x = t;
-
-		}
-
-		if (!dirIsNeg[1]) {
-
-			const t = t_Min_y;
-			t_Min_y = t_Max_y;
-			t_Max_y = t;
-
-		}
-
-		if (!dirIsNeg[2]) {
-
-			const t = t_Min_z;
-			t_Min_z = t_Max_z;
-			t_Max_z = t;
-
-		}
-
-		const t_enter = Math.max(t_Min_x, Math.max(t_Min_y, t_Min_z));
-		const t_exit = Math.min(t_Max_x, Math.min(t_Max_y, t_Max_z));
-
-		return t_enter < t_exit && t_exit >= 0;
 
 	}
 

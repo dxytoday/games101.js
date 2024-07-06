@@ -23,29 +23,7 @@ function to_vec4(v3, w = 1) {
 
 function insideTriangle(x, y, _v) {
 
-	// TODO : Implement this function to check if the point (x, y) is inside the triangle represented by _v[0], _v[1], _v[2]
 
-	const bary = computeBarycentric2D(x, y, _v);
-
-	if (
-
-		bary[0] >= 0 &&
-		bary[1] >= 0 &&
-		bary[2] >= 0 &&
-
-		(
-
-			bary[0] +
-			bary[1] +
-			bary[2]
-
-		).toFixed(4) === '1.0000'
-
-	) {
-
-		return bary;
-
-	}
 
 }
 
@@ -118,15 +96,6 @@ function computeBarycentric2D(x, y, v) {
 	return [c1, c2, c3];
 
 }
-
-const super_sample_step = [
-
-	[0.25, 0.25],
-	[0.75, 0.25],
-	[0.25, 0.75],
-	[0.75, 0.75],
-
-];
 
 class Rasterizer {
 
@@ -308,7 +277,7 @@ class Rasterizer {
 			t.setColor(1, col[i.y]);
 			t.setColor(2, col[i.z]);
 
-			this.rasterize_triangle_msaa(t);
+			this.rasterize_triangle(t);
 
 		}
 
@@ -319,169 +288,6 @@ class Rasterizer {
 
 		const v = t.v;
 
-		// TODO : Find out the bounding box of current triangle.
-		// iterate through the pixel and find if the current pixel is inside the triangle
-
-		// If so, use the following code to get the interpolated z value.
-		//auto[alpha, beta, gamma] = computeBarycentric2D(x, y, t.v);
-		//float w_reciprocal = 1.0/(alpha / v[0].w() + beta / v[1].w() + gamma / v[2].w());
-		//float z_interpolated = alpha * v[0].z() / v[0].w() + beta * v[1].z() / v[1].w() + gamma * v[2].z() / v[2].w();
-		//z_interpolated *= w_reciprocal;
-
-		// TODO : set the current pixel (use the set_pixel function) to the color of the triangle (use getColor function) if it should be painted.
-
-		const a = v[0];
-		const b = v[1];
-		const c = v[2];
-
-		const min_x = Math.floor(Math.min(a.x, b.x, c.x));
-		const min_y = Math.floor(Math.min(a.y, b.y, c.y));
-		const max_x = Math.ceil(Math.max(a.x, b.x, c.x));
-		const max_y = Math.ceil(Math.max(a.y, b.y, c.y));
-
-		const color = new Vector3();
-
-		for (let x = min_x; x < max_x; x++) {
-
-			for (let y = min_y; y < max_y; y++) {
-
-				const cx = x + 0.5;
-				const cy = y + 0.5;
-
-				const barycentric = insideTriangle(cx, cy, v);
-
-				if (!barycentric) {
-
-					continue;
-
-				}
-
-				const [alpha, beta, gamma] = barycentric;
-
-				const index = this.get_index(x, y);
-
-				const depth = alpha * a.z + beta * b.z + gamma * c.z;
-
-				if (depth >= this.depth_buf[index]) {
-
-					continue;
-
-				}
-
-				this.depth_buf[index] = depth;
-
-				color.set(0, 0, 0);
-				color.addScaledVector(t.color[0], alpha);
-				color.addScaledVector(t.color[1], beta);
-				color.addScaledVector(t.color[2], gamma);
-
-				this.set_pixel(index, color);
-
-			}
-
-		}
-	}
-
-	rasterize_triangle_msaa(t) {
-
-		const v = t.v;
-
-		// TODO : Find out the bounding box of current triangle.
-		// iterate through the pixel and find if the current pixel is inside the triangle
-
-		// If so, use the following code to get the interpolated z value.
-		//auto[alpha, beta, gamma] = computeBarycentric2D(x, y, t.v);
-		//float w_reciprocal = 1.0/(alpha / v[0].w() + beta / v[1].w() + gamma / v[2].w());
-		//float z_interpolated = alpha * v[0].z() / v[0].w() + beta * v[1].z() / v[1].w() + gamma * v[2].z() / v[2].w();
-		//z_interpolated *= w_reciprocal;
-
-		// TODO : set the current pixel (use the set_pixel function) to the color of the triangle (use getColor function) if it should be painted.
-
-		const a = v[0];
-		const b = v[1];
-		const c = v[2];
-
-		const min_x = Math.floor(Math.min(a.x, b.x, c.x));
-		const min_y = Math.floor(Math.min(a.y, b.y, c.y));
-		const max_x = Math.ceil(Math.max(a.x, b.x, c.x));
-		const max_y = Math.ceil(Math.max(a.y, b.y, c.y));
-
-		const color = new Vector3();
-
-		for (let x = min_x; x < max_x; x++) {
-
-			for (let y = min_y; y < max_y; y++) {
-
-				let needsUpdate = false;
-
-				for (let ii = 0; ii < 4; ii++) {
-
-					const cx = x + super_sample_step[ii][0];
-					const cy = y + super_sample_step[ii][1];
-
-					const barycentric = insideTriangle(cx, cy, v);
-
-					if (!barycentric) {
-
-						continue;
-
-					}
-
-					const [alpha, beta, gamma] = barycentric;
-
-					const depth = alpha * a.z + beta * b.z + gamma * c.z;
-
-
-					const super_x = x * 2 + ii % 2;
-					const super_y = y * 2 + Math.floor(ii / 2);
-
-					const super_index = this.get_super_index(super_x, super_y);
-
-					if (depth >= this.super_depth_buf[super_index]) {
-
-						continue;
-
-					}
-
-					this.super_depth_buf[super_index] = depth;
-
-					color.set(0, 0, 0);
-					color.addScaledVector(t.getColor(0), alpha);
-					color.addScaledVector(t.getColor(1), beta);
-					color.addScaledVector(t.getColor(2), gamma);
-
-					this.super_frame_buf[super_index].copy(color);
-
-					needsUpdate = true;
-
-				}
-
-				if (!needsUpdate) {
-
-					continue;
-
-				}
-
-				color.set(0, 0, 0);
-				color.add(this.super_frame_buf[this.get_super_index(x * 2, y * 2)]);
-				color.add(this.super_frame_buf[this.get_super_index(x * 2 + 1, y * 2)]);
-				color.add(this.super_frame_buf[this.get_super_index(x * 2, y * 2 + 1)]);
-				color.add(this.super_frame_buf[this.get_super_index(x * 2 + 1, y * 2 + 1)]);
-				color.divideScalar(4);
-
-				const index = this.get_index(x, y);
-
-				this.depth_buf[index] = this.super_depth_buf[this.get_super_index(x * 2, y * 2)];
-				this.depth_buf[index] += this.super_depth_buf[this.get_super_index(x * 2 + 1, y * 2)];
-				this.depth_buf[index] += this.super_depth_buf[this.get_super_index(x * 2, y * 2 + 1)];
-				this.depth_buf[index] += this.super_depth_buf[this.get_super_index(x * 2 + 1, y * 2 + 1)];
-				this.depth_buf[index] /= 4;
-
-				this.set_pixel(index, color);
-
-			}
-
-		}
 	}
 
 	get_index(x, y) {

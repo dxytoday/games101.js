@@ -25,8 +25,6 @@ function get_model_matrix(rotation_angle) {
 
 	const model = new Matrix4();
 
-	// TODO: Copy-paste your implementation from the previous assignment.
-
 	const theta = MathUtils.degToRad(rotation_angle);
 
 	model.makeRotationY(theta);
@@ -43,12 +41,10 @@ function get_projection_matrix(eye_fov, aspect_ratio, zNear, zFar) {
 
 	const projection = new Matrix4();
 
-	// TODO: Copy-paste your implementation from the previous assignment.
-
-	let top = zNear * Math.tan(MathUtils.DEG2RAD * 0.5 * eye_fov);
-	let height = 2 * top;
-	let width = aspect_ratio * height;
-	let left = - 0.5 * width;
+	const top = zNear * Math.tan(MathUtils.DEG2RAD * 0.5 * eye_fov);
+	const height = 2 * top;
+	const width = aspect_ratio * height;
+	const left = - 0.5 * width;
 
 	projection.makePerspective(left, left + width, top, top - height, zNear, zFar);
 
@@ -120,17 +116,9 @@ function texture_fragment_shader(payload) {
 
 	for (const light of lights) {
 
-		L.copy(light.position).sub(mvPosition).normalize();
-		H.addVectors(L, V).normalize();
 
-		const NoL = Math.max(0, N.dot(L));
-		const NoH = Math.max(0, N.dot(H));
 
-		const distance = light.position.distanceTo(mvPosition);
-		const intensity = light.intensity / (distance * distance);
 
-		kd += intensity * NoL;
-		ks += intensity * Math.pow(NoH, 150);
 
 	}
 
@@ -170,17 +158,7 @@ function phong_fragment_shader(payload) {
 
 	for (const light of lights) {
 
-		L.copy(light.position).sub(mvPosition).normalize();
-		H.addVectors(L, V).normalize();
 
-		const NoL = Math.max(0, N.dot(L));
-		const NoH = Math.max(0, N.dot(H));
-
-		const distance = light.position.distanceTo(mvPosition);
-		const intensity = light.intensity / (distance * distance);
-
-		kd += intensity * NoL;
-		ks += intensity * Math.pow(NoH, 150);
 
 	}
 
@@ -204,37 +182,34 @@ function displacement_fragment_shader(payload) {
 	const uv = payload.uv;
 	const texture = payload.texture;
 
-	//#region 计算位移量
-
 	const kh = 0.2, kn = 0.1;
-	const { x, y, z } = normal;
 
-	const t = new Vector3();
-	t.x = x * y / Math.sqrt(x * x + z * z);
-	t.y = Math.sqrt(x * x + z * z);
-	t.z = z * y / Math.sqrt(x * x + z * z);
-	t.normalize();
+	// const { x, y, z } = normal;
 
-	const b = new Vector3();
-	b.crossVectors(normal, t).normalize();
+	// const t = new Vector3();
+	// t.x = x * y / Math.sqrt(x * x + z * z);
+	// t.y = Math.sqrt(x * x + z * z);
+	// t.z = z * y / Math.sqrt(x * x + z * z);
+	// t.normalize();
 
-	const TBN = new Matrix4();
-	TBN.makeBasis(t, b, normal);
+	// const b = new Vector3();
+	// b.crossVectors(normal, t).normalize();
 
-	const { x: u, y: v } = uv;
-	const { width: w, height: h } = texture;
+	// const TBN = new Matrix4();
+	// TBN.makeBasis(t, b, normal);
 
-	const len = texture.getColor(u, v, color).length() * 255;
+	// const { x: u, y: v } = uv;
+	// const { width: w, height: h } = texture;
 
-	const len1 = texture.getColor(u + 1 / w, v, color).length() * 255;
-	const dU = kh * kn * (len1 - len);
+	// const len = texture.getColor(u, v, color).length() * 255;
 
-	const len2 = texture.getColor(u, v + 1 / h, color).length() * 255;
-	const dV = kh * kn * (len2 - len);
+	// const len1 = texture.getColor(u + 1 / w, v, color).length() * 255;
+	// const dU = kh * kn * (len1 - len);
+
+	// const len2 = texture.getColor(u, v + 1 / h, color).length() * 255;
+	// const dV = kh * kn * (len2 - len);
 
 	mvPosition.add(normal.multiplyScalar(kn * len));
-
-	//#endregion
 
 	const lights = [
 		{ position: new Vector3(20, 20, 20), intensity: 500 },
@@ -255,17 +230,8 @@ function displacement_fragment_shader(payload) {
 
 	for (const light of lights) {
 
-		L.copy(light.position).sub(mvPosition).normalize();
-		H.addVectors(L, V).normalize();
 
-		const NoL = Math.max(0, N.dot(L));
-		const NoH = Math.max(0, N.dot(H));
 
-		const distance = light.position.distanceTo(mvPosition);
-		const intensity = light.intensity / (distance * distance);
-
-		kd += intensity * NoL;
-		ks += intensity * Math.pow(NoH, 150);
 
 	}
 
@@ -285,30 +251,30 @@ function bump_fragment_shader(payload) {
 
 	const kh = 0.2, kn = 0.1;
 
-	const { x, y, z } = normal;
+	// const { x, y, z } = normal;
 
-	const t = new Vector3();
-	t.x = x * y / Math.sqrt(x * x + z * z);
-	t.y = Math.sqrt(x * x + z * z);
-	t.z = z * y / Math.sqrt(x * x + z * z);
-	t.normalize();
+	// const t = new Vector3();
+	// t.x = x * y / Math.sqrt(x * x + z * z);
+	// t.y = Math.sqrt(x * x + z * z);
+	// t.z = z * y / Math.sqrt(x * x + z * z);
+	// t.normalize();
 
-	const b = new Vector3();
-	b.crossVectors(normal, t).normalize();
+	// const b = new Vector3();
+	// b.crossVectors(normal, t).normalize();
 
-	const TBN = new Matrix4();
-	TBN.makeBasis(t, b, normal);
+	// const TBN = new Matrix4();
+	// TBN.makeBasis(t, b, normal);
 
-	const { x: u, y: v } = uv;
-	const { width: w, height: h } = texture;
+	// const { x: u, y: v } = uv;
+	// const { width: w, height: h } = texture;
 
-	const len = texture.getColor(u, v, color).length() * 255;
+	// const len = texture.getColor(u, v, color).length() * 255;
 
-	const len1 = texture.getColor(u + 1 / w, v, color).length() * 255;
-	const dU = kh * kn * (len1 - len);
+	// const len1 = texture.getColor(u + 1 / w, v, color).length() * 255;
+	// const dU = kh * kn * (len1 - len);
 
-	const len2 = texture.getColor(u, v + 1 / h, color).length() * 255;
-	const dV = kh * kn * (len2 - len);
+	// const len2 = texture.getColor(u, v + 1 / h, color).length() * 255;
+	// const dV = kh * kn * (len2 - len);
 
 	color.set(-dU, -dV, 1);
 	color.applyMatrix4(TBN);

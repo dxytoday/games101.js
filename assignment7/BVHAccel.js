@@ -46,40 +46,7 @@ class BVHAccel {
 
 	getIntersection(node, ray) {
 
-		const dirIsNeg = [
 
-			ray.direction.x > 0,
-			ray.direction.y > 0,
-			ray.direction.z > 0,
-
-		];
-
-		if (!node.bounds.intersectP(ray, ray.direction_inv, dirIsNeg)) {
-
-			return;
-
-		}
-
-		if (!node.left && !node.right) {
-
-			return node.object.getIntersection(ray);
-
-		}
-
-		const h1 = this.getIntersection(node.left, ray);
-		const h2 = this.getIntersection(node.right, ray);
-
-		if (!h1 && !h2) {
-
-			return;
-
-		}
-
-		if (!h1) return h2;
-
-		if (!h2) return h1;
-
-		return h1.distance < h2.distance ? h1 : h2;
 
 	}
 

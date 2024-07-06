@@ -23,49 +23,6 @@ function get_model_matrix(rotation_angle) {
 
 	const model = new Matrix4();
 
-	// TODO: Implement this function
-	// Create the model matrix for rotating the triangle around the Z axis.
-	// Then return it.
-
-	const theta = MathUtils.degToRad(rotation_angle);
-
-	model.makeRotationZ(theta);
-
-	return model;
-
-}
-
-function get_model_matrix_rodrigues(rotation_angle) {
-
-	const model = new Matrix4();
-
-	const theta = rotation_angle / 180 * Math.PI;
-	const cos = Math.cos(theta);
-	const sin = Math.sin(theta);
-
-	const n = new Vector3(0, 0, 1);
-	n.normalize();
-
-	const nx = n.x;
-	const ny = n.y;
-	const nz = n.z;
-
-	const N = new Matrix3().set(
-
-		0.0, -nz, ny,
-		nz, 0.0, -nx,
-		-ny, nx, 0.0,
-
-	);
-
-	const I = new Matrix3();
-
-	// Eigen::Matrix3f R = cos * I + (1.0 - cos) * n * n.transpose() + sin * N;
-
-	// model.block<3, 3>(0, 0) = R;
-
-	model
-
 	return model;
 
 }
@@ -73,19 +30,6 @@ function get_model_matrix_rodrigues(rotation_angle) {
 function get_projection_matrix(eye_fov, aspect_ratio, zNear, zFar) {
 
 	const projection = new Matrix4();
-
-	// Students will implement this function
-
-	// TODO: Implement this function
-	// Create the projection matrix for the given parameters.
-	// Then return it.
-
-	let top = zNear * Math.tan(MathUtils.DEG2RAD * 0.5 * eye_fov);
-	let height = 2 * top;
-	let width = aspect_ratio * height;
-	let left = - 0.5 * width;
-
-	projection.makePerspective(left, left + width, top, top - height, zNear, zFar);
 
 	return projection;
 

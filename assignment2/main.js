@@ -23,8 +23,6 @@ function get_model_matrix(rotation_angle) {
 
 	const model = new Matrix4();
 
-	// TODO: Copy-paste your implementation from the previous assignment.
-
 	const theta = MathUtils.degToRad(rotation_angle);
 
 	model.makeRotationZ(theta);
@@ -37,12 +35,10 @@ function get_projection_matrix(eye_fov, aspect_ratio, zNear, zFar) {
 
 	const projection = new Matrix4();
 
-	// TODO: Copy-paste your implementation from the previous assignment.
-
-	let top = zNear * Math.tan(MathUtils.DEG2RAD * 0.5 * eye_fov);
-	let height = 2 * top;
-	let width = aspect_ratio * height;
-	let left = - 0.5 * width;
+	const top = zNear * Math.tan(MathUtils.DEG2RAD * 0.5 * eye_fov);
+	const height = 2 * top;
+	const width = aspect_ratio * height;
+	const left = - 0.5 * width;
 
 	projection.makePerspective(left, left + width, top, top - height, zNear, zFar);
 

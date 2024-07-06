@@ -142,8 +142,8 @@ class Renderer {
 
 			for (let px = 0; px < width; px++) {
 
-				const x = (2 * ((px + 0.5) / width) - 1) * scale * imageAspectRatio;
-				const y = (1 - 2 * ((py + 0.5) / height)) * scale;
+				let x;
+				let y;
 
 				const dir = new Vector3(x, y, -1).normalize();
 				dir.applyMatrix4(eye_matrix);

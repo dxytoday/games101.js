@@ -3,29 +3,7 @@ import { Object } from "./Object.js";
 
 function rayTriangleIntersect(v0, v1, v2, orig, dir) {
 
-	let intersection;
 
-	const e1 = new Vector3().subVectors(v1, v0);
-	const e2 = new Vector3().subVectors(v2, v0);
-
-	const s = new Vector3().subVectors(orig, v0);
-
-	const s1 = new Vector3().crossVectors(dir, e2);
-	const s2 = new Vector3().crossVectors(s, e1);
-
-	const m = 1 / s1.dot(e1);
-
-	const t = s2.dot(e2) * m;
-	const u = s1.dot(s) * m;
-	const v = s2.dot(dir) * m;
-
-	if (t > 0 && (u > 0 && v > 0 && 1 - u - v >= 0 && u + v <= 1)) {
-
-		intersection = { tNearK: t, uvK: new Vector2(u, v) };
-
-	}
-
-	return intersection;
 
 }
 

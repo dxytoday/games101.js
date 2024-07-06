@@ -11,8 +11,6 @@ class Buffers {
 
 function insideTriangle(x, y, _v) {
 
-	// TODO : Implement this function to check if the point (x, y) is inside the triangle represented by _v[0], _v[1], _v[2]
-
 	const bary = computeBarycentric2D(x, y, _v);
 
 	if (
@@ -268,85 +266,7 @@ class Rasterizer {
 	// Screen space rasterization
 	rasterize_triangle(t) {
 
-		// TODO: From your HW3, get the triangle rasterization code.
-		// TODO: Inside your rasterization loop:
-		//    * v[i].w() is the vertex view space depth value z.
-		//    * Z is interpolated view space depth for the current pixel
-		//    * zp is depth between zNear and zFar, used for z-buffer
 
-		// float Z = 1.0 / (alpha / v[0].w() + beta / v[1].w() + gamma / v[2].w());
-		// float zp = alpha * v[0].z() / v[0].w() + beta * v[1].z() / v[1].w() + gamma * v[2].z() / v[2].w();
-		// zp *= Z;
-
-		// TODO: Interpolate the attributes:
-		// auto interpolated_color
-		// auto interpolated_normal
-		// auto interpolated_texcoords
-		// auto interpolated_shadingcoords
-
-		// Use: fragment_shader_payload payload( interpolated_color, interpolated_normal.normalized(), interpolated_texcoords, texture ? &*texture : nullptr);
-		// Use: payload.view_pos = interpolated_shadingcoords;
-		// Use: Instead of passing the triangle's color directly to the frame buffer, pass the color to the shaders first to get the final color;
-		// Use: auto pixel_color = fragment_shader(payload);
-
-		const min_x = Math.floor(Math.min(t.v[0].x, t.v[1].x, t.v[2].x));
-		const min_y = Math.floor(Math.min(t.v[0].y, t.v[1].y, t.v[2].y));
-		const max_x = Math.ceil(Math.max(t.v[0].x, t.v[1].x, t.v[2].x));
-		const max_y = Math.ceil(Math.max(t.v[0].y, t.v[1].y, t.v[2].y));
-
-		const payload = new fragment_shader_payload();
-		const normal = new Vector3();
-		const mvPosition = new Vector3();
-		const uv = new Vector2();
-
-		for (let x = min_x; x < max_x; x++) {
-
-			for (let y = min_y; y < max_y; y++) {
-
-				const cx = x + 0.5;
-				const cy = y + 0.5;
-
-				const barycentric = insideTriangle(cx, cy, t.v);
-
-				if (!barycentric) {
-
-					continue;
-
-				}
-
-				const [alpha, beta, gamma] = barycentric;
-
-				const Z = 1.0 / (alpha / t.v[0].w + beta / t.v[1].w + gamma / t.v[2].w);
-				let depth = (alpha * t.v[0].z / t.v[0].w + beta * t.v[1].z / t.v[1].w + gamma * t.v[2].z / t.v[2].w);
-				depth *= Z;
-
-				const index = this.get_index(x, y);
-
-				if (depth >= this.depth_buf[index]) {
-
-					continue;
-
-				}
-
-				this.depth_buf[index] = depth;
-
-				interpolate(alpha, beta, gamma, t.normal[0], t.normal[1], t.normal[2], 1, normal);
-				interpolate(alpha, beta, gamma, t.tex_coords[0], t.tex_coords[1], t.tex_coords[2], 1, uv);
-				interpolate(alpha, beta, gamma, t.mv[0], t.mv[1], t.mv[2], 1, mvPosition);
-				interpolate(alpha, beta, gamma, t.color[0], t.color[1], t.color[2], 1, payload.color);
-
-				payload.normal = normal.normalize();
-				payload.mvPosition = mvPosition;
-				payload.uv = uv;
-				payload.texture = this.texture;
-
-				this.fragment_shader(payload);
-
-				this.set_pixel(index, payload.color);
-
-			}
-
-		}
 
 	}
 
