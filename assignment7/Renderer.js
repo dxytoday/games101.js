@@ -18,9 +18,6 @@ function init(data) {
 	const white = new Material(new Vector3(0.725, 0.71, 0.68), new Vector3(0, 0, 0));
 	const light = new Material(new Vector3(0.65, 0.65, 0.65), new Vector3(47.8348, 38.5664, 31.0808));
 
-	red.roughness = 0.1;
-	red.metalness = 0;
-
 	scene.add(new Mesh(data.floor, white));
 	scene.add(new Mesh(data.shortbox, white));
 	scene.add(new Mesh(data.tallbox, white));
